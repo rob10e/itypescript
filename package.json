@@ -1,44 +1,43 @@
 {
-    "name": "ijavascript",
-    "version": "5.0.15",
-    "description": "IJavascript is a Javascript kernel for the Jupyter notebook",
+    "name": "itypescript",
+    "version": "0.1.0",
+    "description": "ITypescript is a Typescript kernel for the Jupyter notebook",
     "keywords": [
-        "javascript",
+        "typescript",
         "kernel",
         "ipython",
         "jupyter"
     ],
-    "homepage": "https://n-riesco.github.io/ijavascript",
+    "homepage": "https://nearbydelta.github.io/itypescript",
     "bugs": {
-        "url": "https://github.com/n-riesco/ijavascript/issues"
+        "url": "https://github.com/nearbydelta/itypescript/issues"
     },
     "license": "BSD-3-Clause",
     "author": {
-        "author": "Nicolas Riesco",
-        "email": "enquiries@nicolasriesco.net",
-        "url": "http://www.nicolasriesco.net/"
+        "author": "Bugeun Kim"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/n-riesco/ijavascript.git"
+        "url": "https://github.com/nearbydelta/itypescript.git"
     },
     "bin": {
-        "ijs": "bin/ijavascript.js",
-        "ijskernel": "lib/kernel.js"
+        "its": "bin/itypescript.ts",
+        "itskernel": "lib/kernel.ts"
     },
     "dependencies": {
-        "jp-kernel": "0.1.x"
+        "jp-kernel": "latest",
+        "tsun": "latest"
     },
     "devDependencies": {
         "debug": "latest",
-        "jsdoc": "latest",
-        "jshint": "latest",
+        "tsdoc": "latest",
+        "tshint": "latest",
         "mocha": "3"
     },
     "scripts": {
         "doc": "python scripts/doc-build.py",
-        "doc:publish": "node scripts/doc-publish.js gh-pages https://github.com/n-riesco/ijavascript",
-        "lint": "jshint bin lib",
+        "doc:publish": "node scripts/doc-publish.ts gh-pages https://github.com/nearbydelta/itypescript",
+        "lint": "tshint bin lib",
         "test:mocha": "mocha",
         "test": "npm run lint && npm run test:mocha"
     }
