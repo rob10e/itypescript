@@ -1,5 +1,6 @@
-#!/usr/bin/env tsun
+#!/usr/bin/env node
 
+/// <reference path="../typings/index.d.ts" />
 /*
  * BSD 3-Clause License
  *
@@ -34,21 +35,49 @@
  *
  */
 
-import console = require("console");
 import fs = require("fs");
 import path = require("path");
-import Kernel = require("jp-kernel");
+import * as ts from "typescript";
+let Kernel = require("jp-kernel");
 
-class Logger{
+class Logger {
     private static usage = `
-Usage: tsun kernel.ts [--debug] [--hide-undefined] [--protocol=Major[.minor[.patch]]] [--session-working-dir=path] [--show-undefined] [--startup-script=path] connection_file
+Usage: node kernel.ts [--debug] [--hide-undefined] [--protocol=Major[.minor[.patch]]] [--session-working-dir=path] [--show-undefined] [--startup-script=path] connection_file
 `;
 
-    static throwAndExit: (...msgs:string[]) => void;
+    static log: (...msgs: any[]) => void = () => {
+    }
 
+    static onVerbose() {
+        Logger.log = (...msgs: any[]) => {
+            process.stderr.write("KERNEL: ");
+            console.error(msgs.join(" "));
+        };
+    }
+
+    static onProcessDebug() {
+        try {
+            let debugging = require("debug")("KERNEL:");
+            Logger.log = (...msgs: any[]) => {
+                debugging(msgs.join(" "));
+            };
+        } catch (err) {
+            Logger.onVerbose();
+        }
+    }
+
+    static throwAndExit(...msgs: any[]) {
+        console.error(msgs.join(" "));
+        Logger.printUsage();
+        process.exit(1);
+    }
+
+    static printUsage() {
+        console.error(Logger.usage);
+    }
 }
 
-interface KernelConfig{
+interface KernelConfig {
     cwd: string;
     hideUndefined: boolean;
     protocolVersion: string;
@@ -56,117 +85,131 @@ interface KernelConfig{
     debug: boolean;
     kernelInfoReply: Object;
     startupScript?: string;
-    conn?: Object;
+    connection?: Object;
+    transpile?: (code: string) => string;
 }
 
-class Configuration{
-    private onDebug: boolean = false;
-    private workingDir: string = process.cwd();
+class Configuration {
+    private _onDebug: boolean = false;
+    private _workingDir: string = process.cwd();
     private hideUndefined: boolean = false;
     private protocolVer: string = "5.0";
-    private onStartup: () => void = function(){
-        Logger.log("startupCallback:", this.startupCallback);
+    private onStartup: () => void = function () {
+        let code = "require(\"./node_modules/typescript/index.js\");";
+        this.session.execute(code, {
+            onSuccess: function () {
+                Logger.log("startupCallback: \"" + code + "\" run successfuly");
+            },
+            onError: function () {
+                Logger.log("startupCallback: \"" + code + "\" failed to run");
+            },
+        });
     };
+
     private isConnSet: boolean = false;
     private conn: Object = {};
     private response: Object;
-    private startupScript: string;
+    private _startupScript: string;
 
     get config(): KernelConfig {
         let baseObj: KernelConfig = {
-            cwd: this.workingDir,
+            cwd: this._workingDir,
             hideUndefined: this.hideUndefined,
             protocolVersion: this.protocolVer,
             startupCallback: this.onStartup,
-            debug: this.onDebug,
-            kernelInfoReply: this.response
-            startupScript: this.startupScript
+            debug: this._onDebug,
+            kernelInfoReply: this.response,
+            startupScript: this._startupScript,
+            transpile: (code: string) => {
+                return ts.transpile(code, {});
+            }
         };
 
-        if(this.isConnSet){
+        if (this.isConnSet) {
             baseObj.connection = this.conn;
-        }else{
+        } else {
             Logger.throwAndExit("Error: missing {connectionFile}");
         }
 
-        if(this.startupScript){
-            baseObj.startupScript = this.startupScript;
+        if (this._startupScript) {
+            baseObj.startupScript = this._startupScript;
         }
 
         return baseObj;
     }
 
-    set connectionWith(path: string){
-        if(this.isConnSet){
+    set connectionWith(path: string) {
+        if (this.isConnSet) {
             Logger.throwAndExit("Error: {connectionFile} cannot be duplicated");
         }
 
         this.isConnSet = true;
-        this.conn = JSON.parse(fs.readFileSync(path));
+        this.conn = JSON.parse(fs.readFileSync(path).toString());
     }
 
-    onDebug(){
-        this.onDebug = true;
+    onDebug() {
+        this._onDebug = true;
     }
 
-    hideUndef(){
+    hideUndef() {
         this.hideUndefined = true;
     }
 
-    showUndef(){
+    showUndef() {
         this.hideUndefined = true;
     }
 
-    set workingDir(path: string){
-        this.workingDir = path;
+    set workingDir(path: string) {
+        this._workingDir = path;
     }
 
-    set protocolVersion(ver: string){
+    set protocolVersion(ver: string) {
         this.protocolVer = ver;
         let majorVersion: number = parseInt(ver.split(".")[0]);
 
-        if(majorVersion <= 4){
-            let nodeVersion = process.versions.node.split('.')
+        if (majorVersion <= 4) {
+            let tsVersion = ts.version.split(".")
                 .map(function (v) {
                     return parseInt(v, 10);
                 });
-            let protocolVersion = ver.split('.')
+            let protocolVersion = ver.split(".")
                 .map(function (v) {
                     return parseInt(v, 10);
                 });
-            this.kernelInfoReply = {
-                "language": "javascript",
-                "language_version": nodeVersion,
+            this.response = {
+                "language": `TypeScript ${ts.version.split(".",2).join(".")}`,
+                "language_version": tsVersion,
                 "protocol_version": protocolVersion,
             };
-        }else{
-            let nodeVersion = process.versions.node;
-            let ijsVersion = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"))).version;
-            this.kernelInfoReply = {
+        } else {
+            let itsVersion = JSON.parse(
+                fs.readFileSync(path.join(__dirname, "..", "package.json")).toString()
+            ).version;
+            this.response = {
                 "protocol_version": ver,
-                "implementation": "ijavascript",
-                "implementation_version": ijsVersion,
+                "implementation": "typescript",
+                "implementation_version": itsVersion,
                 "language_info": {
-                    "name": "javascript",
-                    "version": nodeVersion,
-                    "mimetype": "application/javascript",
-                    "file_extension": ".js",
+                    "name": `TypeScript ${ts.version.split(".",2).join(".")}`,
+                    "version": ts.version,
+                    "mimetype": "text/x-typescript",
+                    "file_extension": ".ts"
                 },
                 "banner": (
-                    "IJavascript v" + ijsVersion + "\n" +
-                    "https://github.com/n-riesco/ijavascript\n"
+                    "ITypescript v" + itsVersion + "\n" +
+                    "https://github.com/nearbydelta/itypescript\n"
                 ),
                 "help_links": [{
-                    "text": "IJavascript Homepage",
-                    "url": "https://github.com/n-riesco/ijavascript",
+                    "text": "TypeScript Doc",
+                    "url": "http://typescriptlang.org/docs/",
                 }],
             };
 
         }
     }
 
-    set startupScript(script: string){
-        this.startupScript = script;
+    set startupScript(script: string) {
+        this._startupScript = script;
     }
 }
 
@@ -176,39 +219,44 @@ class Configuration{
  * @returns {module:jp-kernel~Config} Kernel config
  */
 class Parser {
-    static parse(): KernelConfig{
+    static parse(): KernelConfig {
         let configBuilder = new Configuration();
         let argv = process.argv.slice(2);
 
-        for(arg in argv){
-            let [name, ...values] = flag.slice(2).split('=');
-            switch(name){
-                case 'debug':
+        for (let arg of argv) {
+            let [name, ...values] = arg.slice(2).split("=");
+            switch (name) {
+                case "debug":
                     configBuilder.onDebug();
+                    Logger.onVerbose();
                     break;
-                case 'hide-undefined':
+                case "hide-undefined":
                     configBuilder.hideUndef();
                     break;
-                case 'protocol':
-                    configBuilder.protocolVersion = values.join('=');
+                case "protocol":
+                    configBuilder.protocolVersion = values.join("=");
                     break;
-                case 'session-working-dir':
-                    configBuilder.workingDir = values.join('=');
+                case "session-working-dir":
+                    configBuilder.workingDir = values.join("=");
                     break;
-                case 'show-undefined':
+                case "show-undefined":
                     configBuilder.showUndef();
                     break;
-                case 'startup-script':
-                    configBuilder.startupScript = values.join('=');
+                case "startup-script":
+                    configBuilder.startupScript = values.join("=");
                     break;
                 default:
-                    configBuilder.connectionWith = flags;
+                    configBuilder.connectionWith = arg;
                     break;
             }
         }
 
         return configBuilder.config;
     }
+}
+
+if (process.env["DEBUG"]) {
+    Logger.onProcessDebug();
 }
 
 let config = Parser.parse();

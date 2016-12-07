@@ -1,5 +1,6 @@
-#!/usr/bin/env tsun
+#!/usr/bin/env node
 
+/// <reference path="../typings/index.d.ts" />
 /*
  * BSD 3-Clause License
  *
@@ -34,7 +35,7 @@
  *
  */
 
-import console = require("console");
+// import console = require("console");
 import {exec, spawn} from "child_process";
 import fs = require("fs");
 import os = require("os");
@@ -72,14 +73,13 @@ for a full list.
 Disclaimer:
   ITypescript notebook and its kernel are modified version of IJavascript notebook and its kernels.
   Copyrights of original codes/algorithms belong to IJavascript developers.
-`
+`;
 
-    private static onDebug: boolean = false;
-    static log: (...msgs: any[]) => void = function (...msgs: any[]) {
-    };
+    static log: (...msgs: any[]) => void = () => {
+    }
 
     static onVerbose() {
-        Logger.log = function (...msgs: any[]) {
+        Logger.log = (...msgs: any[]) => {
             process.stderr.write("ITS: ");
             console.error(msgs.join(" "));
         };
@@ -87,8 +87,7 @@ Disclaimer:
 
     static onProcessDebug() {
         try {
-            import "debug";
-            let debugging = debug("ITS:");
+            let debugging = require("debug")("ITS:");
             Logger.log = function (...msgs: any[]) {
                 debugging(msgs.join(" "));
             };
@@ -112,7 +111,7 @@ Disclaimer:
         console.error(Logger.usage);
     }
 
-    static printContext(){
+    static printContext() {
         Logger.log(Path.toString());
         Logger.log(Arguments.toString());
         Logger.log(Flags.toString());
@@ -129,20 +128,22 @@ Disclaimer:
  * @property {Object}   context.packageJSON   Contents of npm package.json
  **/
 class Path {
-    private static node: string = process.argv[0];
-    private static root: string = path.dirname(path.dirname(fs.realpathSync(process.argv[1])));
+    private static _node: string = process.argv[0];
+    private static _root: string = path.dirname(
+        path.dirname(fs.realpathSync(process.argv[1])) as string
+    );
 
     static toString() {
         return `
-        PATH: [node: '${Path.node}', root: '${Path.root}']`;
+        PATH: [node: "${Path._node}", root: "${Path._root}"]`;
     }
 
     static at(...rest: string[]): string {
-        return path.join(Path.root, ...rest);
+        return path.join(Path._root, ...rest);
     }
 
     static get node(): string {
-        return Path.node;
+        return Path._node;
     }
 
     static get kernel(): string {
@@ -174,11 +175,11 @@ class Flags {
 
     static toString() {
         return `
-        FLAG: [debug? ${Flags.debug ? 'on' : 'off'}, 
-               installAt: '${Flags.install}', 
-               specAt: '${Flags.specPath}',
-               startupScript: '${Flags.startup}',
-               workingDirectory: '${Flags.cwd}']`;
+        FLAG: [debug? ${Flags.debug ? "on" : "off"}, 
+               installAt: "${Flags.install}", 
+               specAt: "${Flags.specPath}",
+               startupScript: "${Flags.startup}",
+               workingDirectory: "${Flags.cwd}"]`;
     }
 
     static onDebug() {
@@ -231,7 +232,10 @@ class Flags {
  * @property {String[]} context.args.frontend Command arguments to run frontend
  **/
 class Arguments {
-    private static _kernel: string[] = [];
+    private static _kernel: string[] = [
+        Path.node,
+        Path.kernel
+    ];
     private static _frontend: string[] = [
         "jupyter",
         "notebook",
@@ -239,8 +243,8 @@ class Arguments {
 
     static toString() {
         return `
-        KernelArgs: [${Arguments._kernel.join(',')}],
-        FrontendArgs: [${Arguments._frontend.join(',')}]`;
+        KernelArgs: [${Arguments._kernel.join(",")}],
+        FrontendArgs: [${Arguments._frontend.join(",")}]`;
     }
 
     static get kernel() {
@@ -252,15 +256,11 @@ class Arguments {
     }
 
     static passToKernel(...args: string[]) {
-        Arguments._kernel.push(args.join('='));
+        Arguments._kernel.push(args.join("="));
     }
 
     static passToFrontend(...args: string[]) {
-        Arguments._frontend.push(args.join('='));
-    }
-
-    static prefixOfKernel(...args: string[]) {
-        Arguments._kernel = args.concat(Arguments._kernel);
+        Arguments._frontend.push(args.join("="));
     }
 
     static callFrontendWith(path: string) {
@@ -270,7 +270,7 @@ class Arguments {
 
 /**
  * @property {String}   context.protocol.version      Protocol version
- * @property {Integer}  context.protocol.majorVersion Protocol major version
+ * @property {Number}  context.protocol.majorVersion Protocol major version
  **/
 class Protocol {
     private static _version: string;
@@ -310,7 +310,7 @@ class Protocol {
 /**
  * @property {Error}    context.frontend.error        Frontend error
  * @property {String}   context.frontend.version      Frontend version
- * @property {Integer}  context.frontend.majorVersion Frontend major version
+ * @property {Number}  context.frontend.majorVersion Frontend major version
  **/
 class Frontend {
     static error: Error;
@@ -320,7 +320,7 @@ class Frontend {
     static toString() {
         return `
         FRONTEND: version ${Frontend._version}
-                  error: ${Frontend.error ? Frontend.error : 'NO ERROR' }`;
+                  error: ${Frontend.error ? Frontend.error : "NO ERROR" }`;
     }
 
     static set version(ver: string) {
@@ -356,64 +356,64 @@ class Frontend {
  */
 class Main {
     static readonly packageJSON: {version: string} = JSON.parse(
-        fs.readFileSync(Path.at("package.json"))
+        fs.readFileSync(Path.at("package.json")).toString()
     );
 
     static prepare(callback?: () => void) {
         let extraArgs: string[] = process.argv.slice(2);
 
-        for (let e in extraArgs) {
-            let [name, values] = e.slice(2).split('=');
+        for (let e of extraArgs) {
+            let [name, ...values] = e.slice(2).split("=");
             if (name.lastIndexOf("its", 0) === 0) {
                 switch (name) {
-                    case 'help':
+                    case "help":
                         Logger.printUsage();
                         Arguments.passToFrontend(e);
                         break;
-                    case 'its-debug':
+                    case "its-debug":
                         Logger.onVerbose();
                         Flags.onDebug();
                         Arguments.passToKernel("--debug");
                         break;
-                    case 'its-help':
+                    case "its-help":
                         Logger.printUsage();
                         process.exit(0);
                         break;
-                    case 'its-hide-undefined':
+                    case "its-hide-undefined":
                         Arguments.passToKernel("--hide-undefined");
                         break;
-                    case 'its-install':
+                    case "its-install":
                         Flags.installAt = values[0];
                         break;
-                    case 'its-install-kernel':
-                        Flags.installAt = 'local';
+                    case "its-install-kernel":
+                        Flags.installAt = "local";
                         break;
-                    case 'its-protocol':
+                    case "its-protocol":
                         Protocol.version = values[0];
                         break;
-                    case 'its-show-undefined':
-                        Arguments.passToKernel('--show-undefined');
+                    case "its-show-undefined":
+                        Arguments.passToKernel("--show-undefined");
                         break;
-                    case 'its-spec-path':
+                    case "its-spec-path":
                         Flags.specAt = values[0];
                         break;
-                    case 'its-startup-script':
-                        Flags.startUpScript = values.join('=');
+                    case "its-startup-script":
+                        Flags.startUpScript = values.join("=");
                         break;
-                    case 'its-working-dir':
-                        Flags.workingDir = values.join('=');
+                    case "its-working-dir":
+                        Flags.workingDir = values.join("=");
                         break;
                     default:
                         Logger.throwAndExit(true, false, "Unknown flag", e);
                 }
             } else {
                 switch (name) {
-                    case 'version':
+                    case "version":
                         console.log(Main.packageJSON.version);
                         process.exit(0);
                         break;
-                    case 'KernelManager.kernel_cmd':
-                        console.warn(`Warning: Flag '${ e }' skipped`);
+                    case "KernelManager.kernel_cmd":
+                        console.warn(`Warning: Flag "${ e }" skipped`);
                         break;
                     default:
                         Arguments.passToFrontend(e);
@@ -421,33 +421,27 @@ class Main {
             }
         }
 
-        if (Flags.spec == SpecLoc.full) {
-            Arguments.prefixOfKernel(Path.node, Path.kernel);
-        } else {
-            Arguments.prefixOfKernel((process.platform === 'win32') ? 'itskernel.cmd' : 'itskernel');
-        }
-
         if (Flags.startScript) {
-            Arguments.passToKernel('--startup-script', Flags.startScript);
+            Arguments.passToKernel("--startup-script", Flags.startScript);
         }
 
         if (Flags.working) {
-            Arguments.passToKernel('--session-working-dir', Flags.working);
+            Arguments.passToKernel("--session-working-dir", Flags.working);
         }
 
-        Arguments.passToKernel('{connection_file}');
+        Arguments.passToKernel("{connection_file}");
 
-        if(callback){
+        if (callback) {
             callback();
         }
     }
 
     static setProtocol() {
-        Arguments.passToKernel('--protocol=', Protocol.version);
+        Arguments.passToKernel("--protocol", Protocol.version);
 
         if (Frontend.majorVersion < 3) {
             Arguments.passToFrontend(
-                '--KernelManager.kernel_cmd', `['${ Arguments.kernel.join("', '") }']`,
+                "--KernelManager.kernel_cmd", `['${ Arguments.kernel.join("', '") }']`,
             );
         }
 
@@ -458,7 +452,7 @@ class Main {
     }
 
     static setJupyterInfoAsync(callback?: () => void) {
-        exec("jupyter --version", function (error, stdout, stderr) {
+        exec("jupyter --version", function (error, stdout) {
             if (error) {
                 Frontend.error = error;
                 Main.setIPythonInfoAsync(callback);
@@ -475,7 +469,7 @@ class Main {
     }
 
     static setIPythonInfoAsync(callback?: () => void) {
-        exec("ipython --version", function (error, stdout, stderr) {
+        exec("ipython --version", function (error, stdout) {
             if (error) {
                 if (Frontend.error) {
                     console.error("Error running `jupyter --version`");
@@ -516,17 +510,25 @@ class Main {
         return tmpdir;
     }
 
-    static copyAsync(callback?: () => void, ...pair:[string, string][]) {
+    static copyAsync(srcDir: string, dstDir: string,
+                     callback?: (...dstFiles: string[]) => void, ...images: string[]) {
+        let dstFiles: string[] = [];
         let callStack: (() => void)[] = [];
-        if(callback){
-            callStack.push(callback);
+        if (callback) {
+            callStack.push(function () {
+                callback(...dstFiles);
+            });
         }
 
-        for(let [src, dst] in pair){
-            callStack.push(function() {
+        for (let img of images) {
+            let src = path.join(srcDir, img);
+            let dst = path.join(dstDir, img);
+            dstFiles.push(dst);
+
+            callStack.push(function () {
                 let readStream = fs.createReadStream(src);
                 let writeStream = fs.createWriteStream(dst);
-                readStream.on("end", function(){
+                readStream.on("end", function () {
                     let top = callStack.pop();
                     top();
                 });
@@ -562,74 +564,67 @@ class Main {
         let specFile = path.join(specDir, "kernel.json");
         let spec = {
             argv: Arguments.kernel,
-            display_name: "Typescript (TSUN)",
+            display_name: "Typescript",
             language: "typescript",
         };
         fs.writeFileSync(specFile, JSON.stringify(spec));
 
         // Copy logo files
-        let logoDir = path.join(Path.images, "nodejs");
-        let logo32: [string, string] = [
-            path.join(logoDir, "js-green-32x32.png"),
-            path.join(specDir, "logo-32x32.png")
-        ];
-        let logo64: [string, string] = [
-            path.join(logoDir, "js-green-64x64.png"),
-            path.join(specDir, "logo-64x64.png")
-        ];
-        Main.copyAsync(function () {
-                // Install kernel spec
-                let args = [
-                    Arguments.frontend[0],
-                    "kernelspec install --replace",
-                    specDir,
-                ];
+        let logoDir = path.join(Path.images);
+        Main.copyAsync(logoDir, specDir, function (...dstFiles: string[]) {
+            // Install kernel spec
+            let args = [
+                Arguments.frontend[0],
+                "kernelspec install --replace",
+                specDir,
+            ];
 
-                if (Flags.installPath !== InstallLoc.global) {
-                    args.push("--user");
+            if (Flags.installPath !== InstallLoc.global) {
+                args.push("--user");
+            }
+
+            let cmd = args.join(" ");
+            exec(cmd, function (error, stdout, stderr) {
+                // Remove temporary spec folder
+                fs.unlinkSync(specFile);
+                for (let file of dstFiles) {
+                    fs.unlinkSync(file);
+                }
+                fs.rmdirSync(specDir);
+                fs.rmdirSync(tmpdir);
+
+                if (error) {
+                    Logger.throwAndExit(
+                        false, true,
+                        `Error running "${cmd}"\n`,
+                        error.toString(),
+                        "\n",
+                        stderr ? stderr.toString() : ""
+                    );
                 }
 
-                var cmd = args.join(" ");
-                exec(cmd, function (error, stdout, stderr) {
-                    // Remove temporary spec folder
-                    fs.unlinkSync(specFile);
-                    fs.unlinkSync(logo32[1]);
-                    fs.unlinkSync(logo64[1]);
-                    fs.rmdirSync(specDir);
-                    fs.rmdirSync(tmpdir);
-
-                    if (error) {
-                        Logger.throwAndExit(
-                            false, true,
-                            `Error running '${cmd}'\n`,
-                            error.toString(),
-                            '\n',
-                            stderr ? stderr.toString() : ''
-                        );
-                    }
-
-                    if (callback) {
-                        callback();
-                    }
-                });
-        }, [logo32, logo64]);
+                if (callback) {
+                    callback();
+                }
+            });
+        }, "logo-32x32.png", "logo-64x64.png");
     }
 
     static spawnFrontend() {
         let [cmd, ...args] = Arguments.frontend;
-        var frontend = spawn(cmd, args, {
+        let frontend = spawn(cmd, args, {
             stdio: "inherit"
         });
 
         // Relay SIGINT onto the frontend
-        var signal = "SIGINT";
+        let signal = "SIGINT";
         process.on(signal, function () {
             frontend.emit(signal);
         });
     }
 }
 
-if (process.env.DEBUG) {
+if (process.env["DEBUG"]) {
     Logger.onProcessDebug();
 }
 
@@ -637,7 +632,7 @@ if (process.env.DEBUG) {
  * Script context
  * @type Main
  */
-Main.prepare(function() {
+Main.prepare(function () {
     Main.setJupyterInfoAsync(function () {
         Main.setProtocol();
         Main.installKernelAsync(function () {

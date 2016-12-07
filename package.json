@@ -1,46 +1,47 @@
 {
-    "name": "itypescript",
-    "version": "0.1.0",
-    "description": "ITypescript is a Typescript kernel for the Jupyter notebook",
-    "keywords": [
-        "typescript",
-        "kernel",
-        "ipython",
-        "jupyter"
-    ],
-    "homepage": "https://nearbydelta.github.io/itypescript",
-    "bugs": {
-        "url": "https://github.com/nearbydelta/itypescript/issues"
-    },
-    "license": "BSD-3-Clause",
-    "author": {
-        "name": "Bugeun Kim"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/nearbydelta/itypescript.git"
-    },
-    "bin": {
-        "its": "bin/itypescript.ts",
-        "itskernel": "lib/kernel.ts"
-    },
-    "dependencies": {
-        "jp-kernel": "latest",
-        "tsun": "latest",
-        "typescript": "latest",
-        "uuid": "latest"
-    },
-    "devDependencies": {
-        "debug": "latest",
-        "tsdoc": "latest",
-        "tshint": "latest",
-        "mocha": "3"
-    },
-    "scripts": {
-        "doc": "python scripts/doc-build.py",
-        "doc:publish": "node scripts/doc-publish.ts gh-pages https://github.com/nearbydelta/itypescript",
-        "lint": "tshint bin lib",
-        "test:mocha": "mocha",
-        "test": "npm run lint && npm run test:mocha"
-    }
+  "name": "itypescript",
+  "version": "0.1.0",
+  "description": "ITypescript is a Typescript kernel for the Jupyter notebook",
+  "keywords": [
+    "typescript",
+    "kernel",
+    "ipython",
+    "jupyter"
+  ],
+  "homepage": "https://nearbydelta.github.io/itypescript",
+  "bugs": {
+    "url": "https://github.com/nearbydelta/itypescript/issues"
+  },
+  "license": "BSD-3-Clause",
+  "author": {
+    "name": "Bugeun Kim"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nearbydelta/itypescript.git"
+  },
+  "bin": {
+    "its": "bin/itypescript.js",
+    "itskernel": "lib/kernel.js"
+  },
+  "dependencies": {
+    "jp-kernel": "^0.1.0",
+    "typescript": "latest",
+    "typescript-compiler": "latest",
+    "uuid": "^3.0.1"
+  },
+  "devDependencies": {
+    "debug": "latest",
+    "typescript-docs": "latest",
+    "tslint": "latest",
+    "mocha": "3"
+  },
+  "scripts": {
+    "doc": "python scripts/doc-build.py",
+    "doc:publish": "node scripts/doc-publish.ts gh-pages https://github.com/nearbydelta/itypescript",
+    "lint": "tslint bin/*.ts lib/*.ts",
+    "tsc": "npm run lint; tsc",
+    "test:mocha": "mocha",
+    "test": "npm run lint && npm run test:mocha"
+  }
 }
