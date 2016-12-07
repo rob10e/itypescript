@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8" />
-<title>graphics</title>
+<title>Completion.Inspection</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
@@ -11751,39 +11751,24 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Graphical-output">Graphical output<a class="anchor-link" href="#Graphical-output">&#182;</a></h1><p>ITypescript provides a number of global variables to produce a graphical output.</p>
-<p><strong>Note</strong>: All the variables introduced in this note are defined globally on javascript kernel(i.e. Base Kernel of IJavascript), so these SHOULD be called as GLOBAL parameters. For example, <code>let $$html$$ = "&lt;div/&gt;"</code> does not work.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered">
-<div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Text-formats">Text formats<a class="anchor-link" href="#Text-formats">&#182;</a></h2><p>ITypescript can output <code>HTML</code> and <code>SVG</code>.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered">
-<div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="$$html$$"><code>$$html$$</code><a class="anchor-link" href="#$$html$$">&#182;</a></h3><p>To output <code>HTML</code> simply assign a string with the HTML to the global variable
-<code>$$html$$</code>. See the example below:</p>
+<h1 id="TAB-completion"><code>TAB</code> completion<a class="anchor-link" href="#TAB-completion">&#182;</a></h1><p>ITypescript provides a completion list for both Typescript keywords and object
+properties. This completion list is shown when <code>TAB</code> is pressed.</p>
+<p>It can be used to complete object properties accessed using the dot operator(<code>.</code>) or the bracket operator (<code>[]</code>).</p>
+<p><strong>Note</strong>: For exact matching, the cell should be run at least once. Otherwise, some properties are not appear, because typescript did not transpiled into javascript yet.</p>
 
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[1]:</div>
+<div class="prompt input_prompt">In&nbsp;[5]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-TypeScript 2.1"><pre><span></span>$$html$$ = &quot;&lt;div style=&#39;background-color:olive;width:50px;height:50px&#39;&gt;&lt;/div&gt;&quot;;
+<div class=" highlight hl-TypeScript 2.1"><pre><span></span>class Surface{
+    texture: string;
+}
+
+let x = new Surface();
 </pre></div>
 
 </div>
@@ -11794,126 +11779,45 @@ div#notebook {
 <div class="output">
 
 
-<div class="output_area"><div class="prompt output_prompt">Out[1]:</div>
+<div class="output_area"><div class="prompt output_prompt">Out[5]:</div>
 
-<div class="output_html rendered_html output_subarea output_execute_result">
-<div style='background-color:olive;width:50px;height:50px'></div>
-</div>
 
-</div>
-
-</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>&#39;use strict&#39;</pre>
 </div>
 
 </div>
-<div class="cell border-box-sizing text_cell rendered">
-<div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="$$svg$$"><code>$$svg$$</code><a class="anchor-link" href="#$$svg$$">&#182;</a></h3><p>Similarly, it is possible to output <code>SVG</code> by assigning a string to the global
-variable <code>$$svg$$</code>:</p>
 
 </div>
 </div>
+
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[2]:</div>
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-TypeScript 2.1"><pre><span></span>$$svg$$ = &quot;&lt;svg&gt;&lt;rect width=80 height=80 style=&#39;fill: orange;&#39;/&gt;&lt;/svg&gt;&quot;;
+<div class=" highlight hl-TypeScript 2.1"><pre><span></span>// Press tab here to see which keywords are appear:
+new 
+// Now press tab here:
+x.
 </pre></div>
 
 </div>
 </div>
 </div>
 
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area"><div class="prompt output_prompt">Out[2]:</div>
-
-<div class="output_svg output_subarea output_execute_result">
-<svg><rect width=80 height=80 style='fill: orange;'/></svg>
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered">
-<div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Binary-formats">Binary formats<a class="anchor-link" href="#Binary-formats">&#182;</a></h2><p>ITypescript can also output pictures in <code>PNG</code> and <code>JPEG</code> formats. However, this
-formats are binary and need to be encoded in <code>base64</code>. See how in the following
-examples.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered">
-<div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="$$png$$"><code>$$png$$</code><a class="anchor-link" href="#$$png$$">&#182;</a></h3><p>In the below example, a <code>PNG</code> file is read, then encoded in <code>base64</code> and finally
-assigned to the global variable <code>$$png$$</code>:</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[4]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-TypeScript 2.1"><pre><span></span>$$png$$ = require(&quot;fs&quot;).readFileSync(&quot;logo.png&quot;).toString(&quot;base64&quot;);
-</pre></div>
-
-</div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area"><div class="prompt output_prompt">Out[4]:</div>
-
-
-<div class="output_png output_subarea output_execute_result">
-<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA3XAAAN1wFCKJt4AAAAB3RJTUUH4AwHBykKI2sE6gAABRZJREFUeNrtm1tsFFUYgL8zO3uhdEu7La20KSUsIqlAucRELmKwDRq5BBKMhoIm6osYIcELgkaDF0hQUoj4IsQYI2iKd5EYQyINGHwAobWFpDdqoJU2pffL7nZnjg/tUsrObpe1a3bp/I9zZv6c/5vzX85/ZgQ7z0nGsSiMczEBmABMACYAE4AJwARgAjABmABMACYAE4AJwARgAjABmABMACYAE4AJwARgAjABjBdRo35SB5CAuOXiaMeMIszYkC4xym2BW3U5UmVgKoqIPQAhBFsfmkyyzYJFCBQBQgTmI4INkCCH4Eg5zE7Kwaty6LoQcLqhm7L6HmMImsRhV1ibn8bqWZPIS7UxQVXwapLWPj9X2r0cq2jnTF0XWJXYAbApsKswmxS7ZcyX5N7TzZTVdQ8TDYhP5/XCbN4umoJDDW3clkWZ1LZ5WX+kjvLGPrCIsY8BihDIGB2qG05Xlxx/fiZ7HssJa3xAZrjsXHwpn1X5qaN6ZdwFwaAXpkn2rcpl5X2T7ljXT0/PYPY9ExIMwG1BbGaGg21LsqLWV7ElHwb0sY0BupRc+KefJKuxf0kJ7nQ7GUnB6iubPfQNaCGWv6CxyzfsCH6dN4uyQ87j4NkWzjT04HKobFjgYmle8ojxfr/O8kPVEMZtRNSfyHi10GOa5PBGN88tzAgamltSxV+NveF9IDDhXj+dex8gxRZswPLD1Zyq7Rr2GY/Gjkdz2L0iB4DSynaKj9bjF7GqA8JlAF1iDZGPHVYl/LO3pRunQTpr6fFTdqV7ZMBwWNhzsompqXZKK27wW3VkqVAlAUVVBrNkUCayKrzwXcNgMRRhHRDfpbBXY0AP9lBXkkpxQTr4pVGOvov2AlaF8019hkOfPzGND1fnYhMCtOiLkvgGYLew/0xzyOGXl2bR/+4C9q+ZSpKqRAUi7neDpedbudLuDVOVwtbFmfTums8XT00nL9Vm7BoJux22W1j2STV+fXSjiue5aHh1Dsc2uZkyUY1oRSREP+Bap49ZJVV4I1zi62en0bSzgBcXZ4JfvwsaIgLq2rykvPUn31/uiPixg2um8vG6aWFL4YTqCPmAdZ/WMOdAFT9ECGLzg5PZXpgdMi4kXkvMplDZ4mHtZ7Vk7S5nX5gsEZA9K3JId6p3CYCb5aCgpdfPKyeuIXac44Oy62E6WLBpfrphbyDxm6JDfcDXfrnG5PfKaeoeMLytaEbKcB8xIQEM6IYG3FoQtPb7efJIveHwzAyHYbsp/gFoErfLTs32uWxZkhUeAlBx3bh0dtqVBNsNapLUiSr7Hs/l2YXpABxYlUvdDQ8/X+oE1XjTMzvLuAXW6dESKAhK2Lw4k9Y3Cm4aH5Djz9zLzsIp4NFGVno+ncwkldKNbkOVl1s8hkEwPleAgIYOX1B/MCDvr8jhnaJsvqxop6bVg6oIFuUlU+R2hlT57aUOw61y3LrAiaoOjpa3saHAZThuUQQb57ki0tXer3H04o0EC4KqoPirev642vufVa38vAZNT8RSWBEs+ugSJb83R61i2aFqzv7dG/K8MTYAJCH99w47VmBV2PbjVe4vqeTXui4i2BXj1yVfV3aQtusCpxu6wx62ipj8OSrhEbeTaWn2kbZYBN9UttPa54+u4vPoZKbZeHi6k+XTnWQlW3HaFRQh6PXpNHb7OFnbxan6Hto6fYOHmKOqjeWvszKEIWOhV8ph/YL/93j8jt5arPSKsVFufiJjAhjn8i9iwplTvDOSzAAAAABJRU5ErkJggg=="
->
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered">
-<div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="$$jpeg$$"><code>$$jpeg$$</code><a class="anchor-link" href="#$$jpeg$$">&#182;</a></h3><p>Similarly with <code>JPEG</code> files and the global variable <code>$$jpeg$$</code>:</p>
-
-</div>
-</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
 <div class="prompt input_prompt">In&nbsp;[6]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-TypeScript 2.1"><pre><span></span>$$jpeg$$ = require(&quot;fs&quot;).readFileSync(&quot;logo.jpg&quot;).toString(&quot;base64&quot;);
+<div class=" highlight hl-TypeScript 2.1"><pre><span></span>// For the bracket, we need an object.
+let object = {
+    name: &quot;me&quot;,
+    age: 1
+};
 </pre></div>
 
 </div>
@@ -11927,13 +11831,26 @@ assigned to the global variable <code>$$png$$</code>:</p>
 <div class="output_area"><div class="prompt output_prompt">Out[6]:</div>
 
 
-<div class="output_jpeg output_subarea output_execute_result">
-<img src="data:image/jpeg;base64,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"
->
+<div class="output_text output_subarea output_execute_result">
+<pre>&#39;use strict&#39;</pre>
 </div>
 
 </div>
 
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-TypeScript 2.1"><pre><span></span>// Now press tab here:
+object[&quot;
+</pre></div>
+
+</div>
 </div>
 </div>
 
@@ -11943,39 +11860,27 @@ assigned to the global variable <code>$$png$$</code>:</p>
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="MIME-output">MIME output<a class="anchor-link" href="#MIME-output">&#182;</a></h2><p>ITypescript also provides the global variable <code>$$mime$$</code> to produce an output in
-any other format understood by the IPython frontend. Following is an example
-where instead of assigning an HTML string to the global variable <code>$$html$$</code>, the
-global variable <code>$$mime$$</code> is assigned an object with the HTML string assigned
-to the property <code>"text/html"</code>:</p>
+<h1 id="Shift-TAB-object-inspection"><code>Shift-TAB</code> object inspection<a class="anchor-link" href="#Shift-TAB-object-inspection">&#182;</a></h1><p>ITypescript has the capability of inspection the value of an object or its
+documentation if available.</p>
+<p>To show the content of a variable, move the cursor to the end of that variable
+and press <code>Shift-TAB</code>.</p>
+<p>When available, ITypescript will show the associated documentation instead.</p>
 
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[5]:</div>
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-TypeScript 2.1"><pre><span></span>$$mime$$ = {&quot;text/html&quot;: &quot;&lt;div style=&#39;background-color:olive;width:50px;height:50px&#39;&gt;&lt;/div&gt;&quot;};
+<div class=" highlight hl-TypeScript 2.1"><pre><span></span>// Press shift-tab here
+x
+// Again, here:
+object
 </pre></div>
 
 </div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area"><div class="prompt output_prompt">Out[5]:</div>
-
-<div class="output_html rendered_html output_subarea output_execute_result">
-<div style='background-color:olive;width:50px;height:50px'></div>
-</div>
-
-</div>
-
 </div>
 </div>
 
