@@ -16,7 +16,7 @@ There are kernels available for [Python](http://ipython.org/notebook.html),
 [Haskell](https://github.com/gibiansky/IHaskell) and [many
 other languages](https://github.com/ipython/ipython/wiki/IPython-kernels-for-other-languages).
 
-Again, We have to emphasize these code is originally came from [IJavascript kernel](http://n-riesco.github.io/ijavascript). 
+Again, We have to emphasize these code is originally come from [IJavascript kernel](http://n-riesco.github.io/ijavascript). 
 We converted the code into typescript, and modified tiny fraction of it.
 
 ## Main Features
@@ -56,12 +56,12 @@ For windows, find `node.js prompt`, run it as administrator, and type:
 ```sh
 npm install -g itypescript
 ```
-For further usage, check [usage.md](https://github.com/nearbydelta/itypescript/master/doc/usage.md)
+For further usage, check [usage.md](https://github.com/nearbydelta/itypescript/blob/master/doc/usage.md)
 
 # Contributions
 
 First of all, thank you for taking the time to contribute. Please, read
-[CONTRIBUTING](http://nearbydelta.github.io/itypescript/contributing.html) and use
+[CONTRIBUTING](http://github.com/nearbydelta/itypescript/blob/master/contributing.md) and use
 the [issue tracker](http://nearbydelta.github.io/itypescript/ijavascript/issues) for any
 contributions: support requests, bug reports, enhancement requests, pull
 requests, submission of tutorials...
