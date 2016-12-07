@@ -32,10 +32,10 @@ examples, from javascript to typescript.
   `HTML`, `SVG`, `PNG`, ...
 - [Asynchronous
   output](http://nearbydelta.github.io/itypescript/doc/async.ipynb.html)
-- [Autocompletion](http://nearbydelta.github.io/itypescript/doc/complete.md.html):
+- [Autocompletion](http://nearbydelta.github.io/itypescript/doc/Completion.Inspection.ipynb.html):
   press `TAB` to complete keywords and object properties
 - [Object
-  inspection](http://nearbydelta.github.io/itypescript/doc/inspect.md.html): press
+  inspection](http://nearbydelta.github.io/itypescript/doc/Completion.Inspection.ipynb.html): press
   `Shift-TAB` to inspect an object and show its content or, if available, its
   documentation
 
@@ -56,6 +56,7 @@ For windows, find `node.js prompt`, run it as administrator, and type:
 ```sh
 npm install -g itypescript
 ```
+For further usage, check [usage.md](https://github.com/nearbydelta/itypescript/master/doc/usage.md)
 
 # Contributions
 
