@@ -34,14 +34,16 @@
  *
  */
 
-import "console";
+import console = require("console");
 import {exec, spawn} from "child_process";
-import "fs";
-import "os";
-import "path";
-import "node-uuid";
+import fs = require("fs");
+import os = require("os");
+import path = require("path");
+import uuid = require("uuid");
 
-let usage = `Itypescript Notebook
+// Setup logging helpers
+class Logger {
+    private static usage: string = `Itypescript Notebook
 
 Usage:
   its <options>
@@ -72,33 +74,52 @@ Disclaimer:
   Copyrights of original codes/algorithms belong to IJavascript developers.
 `
 
-// Setup logging helpers
-let DEBUG: boolean;
+    private static onDebug: boolean = false;
+    static log: (...msgs: any[]) => void = function (...msgs: any[]) {
+    };
 
-let log: () => void;
-function dontLog() {};
-function doLog() {
-  process.stderr.write("IJS: ");
-  console.error.apply(this, arguments);
-};
-function throwAndExit(msg: string) {
-  console.error(
-    `Error: Unknown flag option '${ msg }'\n`
-  );
-  console.error(usage);
-  process.exit(1);
+    static onVerbose() {
+        Logger.log = function (...msgs: any[]) {
+            process.stderr.write("ITS: ");
+            console.error(msgs.join(" "));
+        };
+    }
+
+    static onProcessDebug() {
+        try {
+            import "debug";
+            let debugging = debug("ITS:");
+            Logger.log = function (...msgs: any[]) {
+                debugging(msgs.join(" "));
+            };
+        } catch (err) {
+            Logger.onVerbose();
+        }
+    }
+
+    static throwAndExit(printUsage: boolean, printContext: boolean, ...msgs: any[]) {
+        console.error(msgs.join(" "));
+        if (printUsage) {
+            Logger.printUsage();
+        }
+        if (printContext) {
+            Logger.printContext();
+        }
+        process.exit(1);
+    }
+
+    static printUsage() {
+        console.error(Logger.usage);
+    }
+
+    static printContext(){
+        Logger.log(Path.toString());
+        Logger.log(Arguments.toString());
+        Logger.log(Flags.toString());
+        Logger.log(Protocol.toString());
+        Logger.log(Frontend.toString());
+    }
 }
-
-if (process.env.DEBUG) {
-  DEBUG = true;
-
-  try {
-    import debug;
-    doLog = debug("ITS:");
-  } catch (err) {}
-}
-
-log = DEBUG ? doLog : dontLog;
 
 /**
  * @property {String}   context.path.node     Path to Node.js shell
@@ -107,22 +128,30 @@ log = DEBUG ? doLog : dontLog;
  * @property {String}   context.path.images   Path to IJavascript images folder
  * @property {Object}   context.packageJSON   Contents of npm package.json
  **/
-class ShellPath{
-  readonly node: string;
-  readonly root: string;
-  
-  constructor(node: String, root: String){
-    this.node = node;
-    this.root = root;
-  }
+class Path {
+    private static node: string = process.argv[0];
+    private static root: string = path.dirname(path.dirname(fs.realpathSync(process.argv[1])));
 
-  get kernel(): string {
-    return path.join(root, "lib", "kernel.js");
-  }
-  
-  get images(): string {
-    return path.join(root, "images");
-  }
+    static toString() {
+        return `
+        PATH: [node: '${Path.node}', root: '${Path.root}']`;
+    }
+
+    static at(...rest: string[]): string {
+        return path.join(Path.root, ...rest);
+    }
+
+    static get node(): string {
+        return Path.node;
+    }
+
+    static get kernel(): string {
+        return Path.at("lib", "kernel.js");
+    }
+
+    static get images(): string {
+        return Path.at("images");
+    }
 }
 
 /**
@@ -132,33 +161,150 @@ class ShellPath{
  * @property {String}   context.flag.startup  --ijs-startup-script=path
  * @property {String}   context.flag.cwd      --ijs-working-dir=path
  **/
-class ShellFlags{
-  debug: boolean = false;
-  install: string;
-  specPath: string;
-  startup: string;
-  cwd: string;
+enum InstallLoc {local, global}
+enum SpecLoc {none, full}
+
+class Flags {
+
+    private static debug: boolean = false;
+    private static install: InstallLoc;
+    private static specPath: SpecLoc;
+    private static startup: string;
+    private static cwd: string;
+
+    static toString() {
+        return `
+        FLAG: [debug? ${Flags.debug ? 'on' : 'off'}, 
+               installAt: '${Flags.install}', 
+               specAt: '${Flags.specPath}',
+               startupScript: '${Flags.startup}',
+               workingDirectory: '${Flags.cwd}']`;
+    }
+
+    static onDebug() {
+        Flags.debug = true;
+    }
+
+    static set installAt(flag: string) {
+        let loc = InstallLoc[flag];
+        if (!loc) {
+            Logger.throwAndExit(true, false, "Invalid flag for install location", flag);
+        }
+        Flags.install = loc;
+    }
+
+    static set specAt(flag: string) {
+        let loc = SpecLoc[flag];
+        if (!loc) {
+            Logger.throwAndExit(true, false, "Invalid flag for spec location", flag);
+        }
+        Flags.specPath = loc;
+    }
+
+    static set startUpScript(script: string) {
+        Flags.startup = script;
+    }
+
+    static set workingDir(loc: string) {
+        Flags.cwd = loc;
+    }
+
+    static get spec() {
+        return Flags.specPath;
+    }
+
+    static get startScript() {
+        return Flags.startup;
+    }
+
+    static get working() {
+        return Flags.cwd;
+    }
+
+    static get installPath() {
+        return Flags.install;
+    }
 }
 
 /**
  * @property {String[]} context.args.kernel   Command arguments to run kernel
  * @property {String[]} context.args.frontend Command arguments to run frontend
  **/
-class ShellArgs{
-  kernel: string[] = [];
-  frontend: string[] = [
-      "jupyter",
-      "notebook",
+class Arguments {
+    private static _kernel: string[] = [];
+    private static _frontend: string[] = [
+        "jupyter",
+        "notebook",
     ];
+
+    static toString() {
+        return `
+        KernelArgs: [${Arguments._kernel.join(',')}],
+        FrontendArgs: [${Arguments._frontend.join(',')}]`;
+    }
+
+    static get kernel() {
+        return Arguments._kernel;
+    }
+
+    static get frontend() {
+        return Arguments._frontend;
+    }
+
+    static passToKernel(...args: string[]) {
+        Arguments._kernel.push(args.join('='));
+    }
+
+    static passToFrontend(...args: string[]) {
+        Arguments._frontend.push(args.join('='));
+    }
+
+    static prefixOfKernel(...args: string[]) {
+        Arguments._kernel = args.concat(Arguments._kernel);
+    }
+
+    static callFrontendWith(path: string) {
+        Arguments._frontend[0] = path;
+    }
 }
 
 /**
  * @property {String}   context.protocol.version      Protocol version
  * @property {Integer}  context.protocol.majorVersion Protocol major version
  **/
-class ProtocolSpec{
-  version?: string;
-  majorVersion?: number;
+class Protocol {
+    private static _version: string;
+    private static _majorVersion: number;
+
+    static toString() {
+        return `
+        PROTOCOL: version ${Protocol._version}`;
+    }
+
+    static set version(ver: string) {
+        Protocol._version = ver;
+        Protocol._majorVersion = parseInt(ver.split(".", 1)[0]);
+    }
+
+    private static setup() {
+        if (!Protocol._version) {
+            if (Frontend.majorVersion < 3) {
+                Protocol.version = "4.1";
+            } else {
+                Protocol.version = "5.0";
+            }
+        }
+    }
+
+    static get version() {
+        Protocol.setup();
+        return Protocol._version;
+    }
+
+    static get majorVersion() {
+        Protocol.setup();
+        return Protocol._majorVersion;
+    }
 }
 
 /**
@@ -166,14 +312,40 @@ class ProtocolSpec{
  * @property {String}   context.frontend.version      Frontend version
  * @property {Integer}  context.frontend.majorVersion Frontend major version
  **/
-interface FrontendSpec{
-  error?: Error;
-  version?: string;
-  majorVersion?: number;
+class Frontend {
+    static error: Error;
+    private static _version: string;
+    private static _majorVersion: number;
+
+    static toString() {
+        return `
+        FRONTEND: version ${Frontend._version}
+                  error: ${Frontend.error ? Frontend.error : 'NO ERROR' }`;
+    }
+
+    static set version(ver: string) {
+        Frontend._version = ver;
+        Frontend._majorVersion = parseInt(ver.split(".")[0]);
+
+        if (isNaN(Frontend.majorVersion)) {
+            Logger.throwAndExit(false, true,
+                "Error parsing Jupyter/Ipython version:",
+                ver
+            );
+        }
+    }
+
+    static get version() {
+        return Frontend._version;
+    }
+
+    static get majorVersion() {
+        return Frontend._majorVersion;
+    }
 }
 
 /**
- * @typedef Context
+ * @typedef Main
  *
  * @property            context
  * @property            context.path
@@ -182,339 +354,298 @@ interface FrontendSpec{
  * @property            context.protocol
  * @property            context.frontend
  */
-class Context{
-  readonly paths: ShellPath;
-  readonly packageJSON: Object;
-  flag: ShellFlag;
-  args: ShellArgs;
-  protocol: ProtocolSpec;
-  frontend: FrontendSpec;
-
-  constructor() {
-    this.path = new ShellPath(
-      process.argv[0], 
-      path.dirname(path.dirname(
-        fs.realpathSync(process.argv[1])
-      ))
-    );
-    
-    this.packageJSON = JSON.parse(
-      fs.readFileSync(path.join(paths.root, "package.json"))
+class Main {
+    static readonly packageJSON: {version: string} = JSON.parse(
+        fs.readFileSync(Path.at("package.json"))
     );
 
-    args = new ShellArgs();
-    flag = new ShellFlags();
-    protocol = new ProtocolSpec();
-    
-    process.argv.slice(2).forEach(function(e: string) {
-      if (e === "--help") {
-        console.log(usage);
-        args.frontend.push(e);
+    static prepare(callback?: () => void) {
+        let extraArgs: string[] = process.argv.slice(2);
 
-      } else if (e === "--ijs-debug") {
-        DEBUG = true;
-        log = doLog;
-
-        flag.debug = true;
-        args.kernel.push("--debug");
-
-      } else if (e === "--ijs-help") {
-        console.log(usage);
-        process.exit(0);
-
-      } else if (e === "--ijs-hide-undefined") {
-        args.kernel.push("--hide-undefined");
-        
-      } else if (e.lastIndexOf("--ijs-install=", 0) === 0) {
-        flag.install = e.slice(14);
-        if (flag.install !== "local" &&
-            flag.install !== "global") {
-          throwAndExit(e);
-        }
-
-      } else if (e === "--ijs-install-kernel") {
-        flag.install = "local";
-
-      } else if (e.lastIndexOf("--ijs-protocol=", 0) === 0) {
-        let version = e.slice(15)
-        protocol = {
-          version: version,
-          majorVersion: parseInt(
-            version.split(".", 1)[0]
-          )
-        };
-
-      } else if (e === "--ijs-show-undefined") {
-        args.kernel.push("--show-undefined");
-
-      } else if (e.lastIndexOf("--ijs-spec-path=", 0) === 0) {
-        flag.specPath = e.slice(16);
-        if (flag.specPath !== "none" &&
-            flag.specPath !== "full") {
-          throwAndExit(e);
-        }
-
-      } else if (e.lastIndexOf("--ijs-startup-script=", 0) === 0) {
-        flag.startup = fs.realpathSync(e.slice(21));
-
-      } else if (e.lastIndexOf("--ijs-working-dir=", 0) === 0) {
-        flag.cwd = fs.realpathSync(e.slice(18));
-
-      } else if (e.lastIndexOf("--ijs-", 0) === 0) {
-        throwAndExit(e);
-
-      } else if (e.lastIndexOf("--KernelManager.kernel_cmd=", 0) === 0) {
-        console.warn(`Warning: Flag '${ e }' skipped`);
-
-      } else if (e === "--version") {
-        console.log(packageJSON.version);
-        process.exit(0);
-        
-      } else {
-        args.frontend.push(e);
-      }
-    });
-
-    if (flag.specPath === "full") {
-      args.kernel = [
-        paths.node,
-        paths.kernel,
-      ].concat(args.kernel);
-    } else {
-      args.kernel = [
-        (process.platform === 'win32') ? 'itskernel.cmd' : 'itskernel',
-      ].concat(args.kernel);
-    }
-
-    if (flag.startup) {
-      args.kernel.push("--startup-script=" + flag.startup);
-    }
-
-    if (flag.cwd) {
-      args.kernel.push("--session-working-dir=" + flag.cwd);
-    }
-
-    args.kernel.push("{connection_file}");
-  }
-  
-  setProtocol() {
-    if (!protocol.version) {
-      if (frontend.majorVersion < 3) {
-        protocol.version = "4.1";
-        protocol.majorVersion = 4;
-      } else {
-        protocol.version = "5.0";
-        protocol.majorVersion = 5;
-      }
-    }
-
-    args.kernel.push("--protocol=" + protocol.version);
-
-    if (frontend.majorVersion < 3) {
-      args.frontend.push(
-        `--KernelManager.kernel_cmd=['${ args.kernel.join("', '") }']`,
-      );
-    }
-
-    if (frontend.majorVersion < 3 &&
-      protocol.majorVersion >= 5) {
-      console.warn("Warning: Protocol v5+ requires Jupyter v3+");
-    }
-  }
-
-  setJupyterInfoAsync(callback:() => void) {
-    exec("jupyter --version", function(error, stdout, stderr) {
-      if (error) {
-        frontend = {error: error};
-        context.setIPythonInfoAsync(callback);
-        return;
-      }
-
-      args.frontend[0] = "jupyter";
-      let jupyterVer = stdout.toString().trim();
-      frontend = {version: jupyterVer, majorVersion: parseInt(jupyterVer.split(".")[0])};
-      
-      if (isNaN(frontend.majorVersion)) {
-        console.error(
-          "Error parsing Jupyter version:",
-          version.frontend
-        );
-        log("CONTEXT:", this);
-        process.exit(1);
-      }
-
-      if (callback) {
-        callback();
-      }
-    });
-  }
-
-  setIPythonInfoAsync(callback: () => void) {
-    exec("ipython --version", function(error, stdout, stderr) {
-      if (error) {
-        if (frontend.error) {
-          console.error("Error running `jupyter --version`");
-          console.error(frontend.error.toString());
-        }
-        console.error("Error running `ipython --version`");
-        console.error(error.toString());
-        log("CONTEXT:", this);
-        process.exit(1);
-      }
-
-      args.frontend[0] = "ipython";
-      
-      let ipyVer = stdout.toString().trim();
-      frontend = {version: ipyVer, majorVersion: parseInt(ipyVer.split(".")[0])};
-
-      if (isNaN(frontend.majorVersion)) {
-        console.error(
-          "Error parsing IPython version:",
-          version.frontend
-        );
-        log("CONTEXT:", this);
-        process.exit(1);
-      }
-
-      if (callback) {
-        callback();
-      }
-    });
-  }
-
-  installKernelAsync(callback: () => void) {
-    if (frontend.majorVersion < 3) {
-      if (flag.install) {
-        console.error(
-          "Error: Installation of kernel specs requires Jupyter v3+"
-        );
-      }
-
-      if (callback) {
-        callback();
-      }
-
-      return;
-    }
-
-    // Create temporary spec folder
-    let tmpdir = makeTmpdir();
-    let specDir = path.join(tmpdir, "typescript");
-    fs.mkdirSync(specDir);
-
-    // Create spec file
-    var specFile = path.join(specDir, "kernel.json");
-    var spec = {
-        argv: args.kernel,
-        display_name: "Typescript (TSUN)",
-        language: "typescript",
-    };
-    fs.writeFileSync(specFile, JSON.stringify(spec));
-
-    // Copy logo files
-    let logoDir = path.join(paths.images, "nodejs");
-    let logo32Src = path.join(logoDir, "js-green-32x32.png");
-    let logo32Dst = path.join(specDir, "logo-32x32.png");
-    let logo64Src = path.join(logoDir, "js-green-64x64.png");
-    let logo64Dst = path.join(specDir, "logo-64x64.png");
-    copyAsync(logo32Src, logo32Dst, function() {
-        copyAsync(logo64Src, logo64Dst, function() {
-
-            // Install kernel spec
-            var args = [
-                context.args.frontend[0],
-                "kernelspec install --replace",
-                specDir,
-            ];
-            if (context.flag.install !== "global") {
-                args.push("--user");
+        for (let e in extraArgs) {
+            let [name, values] = e.slice(2).split('=');
+            if (name.lastIndexOf("its", 0) === 0) {
+                switch (name) {
+                    case 'help':
+                        Logger.printUsage();
+                        Arguments.passToFrontend(e);
+                        break;
+                    case 'its-debug':
+                        Logger.onVerbose();
+                        Flags.onDebug();
+                        Arguments.passToKernel("--debug");
+                        break;
+                    case 'its-help':
+                        Logger.printUsage();
+                        process.exit(0);
+                        break;
+                    case 'its-hide-undefined':
+                        Arguments.passToKernel("--hide-undefined");
+                        break;
+                    case 'its-install':
+                        Flags.installAt = values[0];
+                        break;
+                    case 'its-install-kernel':
+                        Flags.installAt = 'local';
+                        break;
+                    case 'its-protocol':
+                        Protocol.version = values[0];
+                        break;
+                    case 'its-show-undefined':
+                        Arguments.passToKernel('--show-undefined');
+                        break;
+                    case 'its-spec-path':
+                        Flags.specAt = values[0];
+                        break;
+                    case 'its-startup-script':
+                        Flags.startUpScript = values.join('=');
+                        break;
+                    case 'its-working-dir':
+                        Flags.workingDir = values.join('=');
+                        break;
+                    default:
+                        Logger.throwAndExit(true, false, "Unknown flag", e);
+                }
+            } else {
+                switch (name) {
+                    case 'version':
+                        console.log(Main.packageJSON.version);
+                        process.exit(0);
+                        break;
+                    case 'KernelManager.kernel_cmd':
+                        console.warn(`Warning: Flag '${ e }' skipped`);
+                        break;
+                    default:
+                        Arguments.passToFrontend(e);
+                }
             }
-            var cmd = args.join(" ");
-            exec(cmd, function(error, stdout, stderr) {
+        }
 
-                // Remove temporary spec folder
-                fs.unlinkSync(specFile);
-                fs.unlinkSync(logo32Dst);
-                fs.unlinkSync(logo64Dst);
-                fs.rmdirSync(specDir);
-                fs.rmdirSync(tmpdir);
+        if (Flags.spec == SpecLoc.full) {
+            Arguments.prefixOfKernel(Path.node, Path.kernel);
+        } else {
+            Arguments.prefixOfKernel((process.platform === 'win32') ? 'itskernel.cmd' : 'itskernel');
+        }
 
-                if (error) {
-                    console.error(util.format("Error running `%s`", cmd));
-                    console.error(error.toString());
-                    if (stderr) console.error(stderr.toString());
-                    log("CONTEXT:", context);
-                  process.exit(1);
-                }
+        if (Flags.startScript) {
+            Arguments.passToKernel('--startup-script', Flags.startScript);
+        }
 
-                if (callback) {
-                    callback();
-                }
-            });
+        if (Flags.working) {
+            Arguments.passToKernel('--session-working-dir', Flags.working);
+        }
+
+        Arguments.passToKernel('{connection_file}');
+
+        if(callback){
+            callback();
+        }
+    }
+
+    static setProtocol() {
+        Arguments.passToKernel('--protocol=', Protocol.version);
+
+        if (Frontend.majorVersion < 3) {
+            Arguments.passToFrontend(
+                '--KernelManager.kernel_cmd', `['${ Arguments.kernel.join("', '") }']`,
+            );
+        }
+
+        if (Frontend.majorVersion < 3 &&
+            Protocol.majorVersion >= 5) {
+            console.warn("Warning: Protocol v5+ requires Jupyter v3+");
+        }
+    }
+
+    static setJupyterInfoAsync(callback?: () => void) {
+        exec("jupyter --version", function (error, stdout, stderr) {
+            if (error) {
+                Frontend.error = error;
+                Main.setIPythonInfoAsync(callback);
+                return;
+            }
+
+            Arguments.callFrontendWith("jupyter");
+            Frontend.version = stdout.toString().trim();
+
+            if (callback) {
+                callback();
+            }
         });
-    });
+    }
+
+    static setIPythonInfoAsync(callback?: () => void) {
+        exec("ipython --version", function (error, stdout, stderr) {
+            if (error) {
+                if (Frontend.error) {
+                    console.error("Error running `jupyter --version`");
+                    console.error(Frontend.error.toString());
+                }
+                Logger.throwAndExit(false, true,
+                    "Error running `ipython --version`\n",
+                    error.toString()
+                );
+            }
+
+            Arguments.callFrontendWith("ipython");
+            Frontend.version = stdout.toString().trim();
+
+            if (callback) {
+                callback();
+            }
+        });
+    }
+
+    static makeTmpdir(maxAttempts: number = 10): string {
+        let attempts = 0;
+        let tmpdir: string;
+
+        while (!tmpdir) {
+            attempts++;
+            try {
+                tmpdir = path.join(os.tmpdir(), uuid.v4());
+                fs.mkdirSync(tmpdir);
+            } catch (e) {
+                if (attempts >= maxAttempts) {
+                    Logger.throwAndExit(false, false, "Cannot make a temp directory!");
+                }
+                tmpdir = null;
+            }
+        }
+
+        return tmpdir;
+    }
+
+    static copyAsync(callback?: () => void, ...pair:[string, string][]) {
+        let callStack: (() => void)[] = [];
+        if(callback){
+            callStack.push(callback);
+        }
+
+        for(let [src, dst] in pair){
+            callStack.push(function() {
+                let readStream = fs.createReadStream(src);
+                let writeStream = fs.createWriteStream(dst);
+                readStream.on("end", function(){
+                    let top = callStack.pop();
+                    top();
+                });
+                readStream.pipe(writeStream);
+            });
+        }
+
+        let top = callStack.pop();
+        top();
+    }
+
+    static installKernelAsync(callback?: () => void) {
+        if (Frontend.majorVersion < 3) {
+            if (Flags.installPath) {
+                console.error(
+                    "Error: Installation of kernel specs requires Jupyter v3+"
+                );
+            }
+
+            if (callback) {
+                callback();
+            }
+
+            return;
+        }
+
+        // Create temporary spec folder
+        let tmpdir = Main.makeTmpdir();
+        let specDir = path.join(tmpdir, "typescript");
+        fs.mkdirSync(specDir);
+
+        // Create spec file
+        let specFile = path.join(specDir, "kernel.json");
+        let spec = {
+            argv: Arguments.kernel,
+            display_name: "Typescript (TSUN)",
+            language: "typescript",
+        };
+        fs.writeFileSync(specFile, JSON.stringify(spec));
+
+        // Copy logo files
+        let logoDir = path.join(Path.images, "nodejs");
+        let logo32: [string, string] = [
+            path.join(logoDir, "js-green-32x32.png"),
+            path.join(specDir, "logo-32x32.png")
+        ];
+        let logo64: [string, string] = [
+            path.join(logoDir, "js-green-64x64.png"),
+            path.join(specDir, "logo-64x64.png")
+        ];
+        Main.copyAsync(function () {
+                // Install kernel spec
+                let args = [
+                    Arguments.frontend[0],
+                    "kernelspec install --replace",
+                    specDir,
+                ];
+
+                if (Flags.installPath !== InstallLoc.global) {
+                    args.push("--user");
+                }
+
+                var cmd = args.join(" ");
+                exec(cmd, function (error, stdout, stderr) {
+                    // Remove temporary spec folder
+                    fs.unlinkSync(specFile);
+                    fs.unlinkSync(logo32[1]);
+                    fs.unlinkSync(logo64[1]);
+                    fs.rmdirSync(specDir);
+                    fs.rmdirSync(tmpdir);
+
+                    if (error) {
+                        Logger.throwAndExit(
+                            false, true,
+                            `Error running '${cmd}'\n`,
+                            error.toString(),
+                            '\n',
+                            stderr ? stderr.toString() : ''
+                        );
+                    }
+
+                    if (callback) {
+                        callback();
+                    }
+                });
+        }, [logo32, logo64]);
+    }
+
+    static spawnFrontend() {
+        let [cmd, ...args] = Arguments.frontend;
+        var frontend = spawn(cmd, args, {
+            stdio: "inherit"
+        });
+
+        // Relay SIGINT onto the frontend
+        var signal = "SIGINT";
+        process.on(signal, function () {
+            frontend.emit(signal);
+        });
+    }
 }
 
+if (process.env.DEBUG) {
+    Logger.onProcessDebug();
 }
 
 /**
  * Script context
- * @type Context
+ * @type Main
  */
-let context: Context = new Context();
+Main.prepare(function() {
+    Main.setJupyterInfoAsync(function () {
+        Main.setProtocol();
+        Main.installKernelAsync(function () {
+            Logger.printContext();
 
-context.setJupyterInfoAsync(function() {
-  context.setProtocol();
-
-  context.installKernelAsync(function() {
-    log("CONTEXT:", context);
-
-    if (!context.flag.install) {
-      spawnFrontend(context);
-    }
-  });
+            if (!Flags.installPath) {
+                Main.spawnFrontend();
+            }
+        });
+    });
 });
-
-
-function spawnFrontend(context) {
-    var cmd = context.args.frontend[0];
-    var args = context.args.frontend.slice(1);
-    var frontend = spawn(cmd, args, {
-        stdio: "inherit"
-    });
-
-    // Relay SIGINT onto the frontend
-    var signal = "SIGINT";
-    process.on(signal, function() {
-        frontend.emit(signal);
-    });
-}
-
-function makeTmpdir(maxAttempts) {
-    maxAttempts = maxAttempts ? maxAttempts : 10;
-    var attempts = 0;
-
-    var tmpdir;
-    while (!tmpdir) {
-        attempts++;
-        try {
-            tmpdir = path.join(os.tmpdir(), uuid.v4());
-            fs.mkdirSync(tmpdir);
-        } catch (e) {
-            if (attempts >= maxAttempts)
-                throw e;
-            tmpdir = null;
-        }
-    }
-
-    return tmpdir;
-}
-
-function copyAsync(src, dst, callback) {
-    var readStream = fs.createReadStream(src);
-    var writeStream = fs.createWriteStream(dst);
-    if (callback) {
-        readStream.on("end", callback);
-    }
-    readStream.pipe(writeStream);
-}

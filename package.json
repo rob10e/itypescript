@@ -26,7 +26,9 @@
     },
     "dependencies": {
         "jp-kernel": "latest",
-        "tsun": "latest"
+        "tsun": "latest",
+        "typescript": "latest",
+        "uuid": "latest"
     },
     "devDependencies": {
         "debug": "latest",

@@ -100,7 +100,7 @@ log = DEBUG ? doLog : dontLog;
 
 
 /**
- * @typedef Context
+ * @typedef Main
  *
  * @property            context
  * @property            context.path
@@ -129,7 +129,7 @@ log = DEBUG ? doLog : dontLog;
 
 /**
  * Script context
- * @type Context
+ * @type Main
  */
 var context = {
     path: {},
