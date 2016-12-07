@@ -61,7 +61,7 @@ For further usage, check [usage.md](https://github.com/nearbydelta/itypescript/b
 # Contributions
 
 First of all, thank you for taking the time to contribute. Please, read
-[CONTRIBUTING](http://github.com/nearbydelta/itypescript/blob/master/CONTRIBUTE.md) and use
+[CONTRIBUTING](http://github.com/nearbydelta/itypescript/blob/master/CONTRIBUTING.md) and use
 the [issue tracker](http://github.com/nearbydelta/itypescript/issues) for any
 contributions: support requests, bug reports, enhancement requests, pull
 requests, submission of tutorials...
