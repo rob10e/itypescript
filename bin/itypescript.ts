@@ -40,7 +40,7 @@ import {exec, spawn} from "child_process";
 import fs = require("fs");
 import os = require("os");
 import path = require("path");
-import uuid = require("uuid");
+let uuid = require("uuid");
 
 // Setup logging helpers
 class Logger {
@@ -51,16 +51,15 @@ Usage:
 
 The recognized options are:
   --help                        show ITypescript & notebook help
-  --its-debug                   enable debug log level
-  --its-help                    show ITypescript help
-  --its-hide-undefined          do not show undefined results
-  --its-install=[local|global]  install ITypescript kernel
-  --its-protocol=version        set protocol version, e.g. 4.1
-  --its-show-undefined          show undefined results
-  --its-spec-path=[none|full]   set whether kernel spec uses full paths
-  --its-startup-script=path     run script on startup
+  --ts-debug                    enable debug log level
+  --ts-help                     show ITypescript help
+  --ts-hide-undefined           do not show undefined results
+  --ts-install=[local|global]   install ITypescript kernel
+  --ts-protocol=version         set protocol version, e.g. 4.1
+  --ts-show-undefined           show undefined results
+  --ts-startup-script=path      run script on startup
                                 (path can be a file or a folder)
-  --its-working-dir=path        set session working directory
+  --ts-working-dir=path         set session working directory
                                 (default = current working directory)
   --version                     show ITypescript version
 
@@ -120,13 +119,6 @@ Disclaimer:
     }
 }
 
-/**
- * @property {String}   context.path.node     Path to Node.js shell
- * @property {String}   context.path.root     Path to IJavascript root folder
- * @property {String}   context.path.kernel   Path to IJavascript kernel
- * @property {String}   context.path.images   Path to IJavascript images folder
- * @property {Object}   context.packageJSON   Contents of npm package.json
- **/
 class Path {
     private static _node: string = process.argv[0];
     private static _root: string = path.dirname(
@@ -155,29 +147,19 @@ class Path {
     }
 }
 
-/**
- * @property {Boolean}  context.flag.debug    --ijs-debug
- * @property {String}   context.flag.install  --ijs-install=[local|global]
- * @property {String}   context.flag.specPath --ijs-spec-path=[none|full]
- * @property {String}   context.flag.startup  --ijs-startup-script=path
- * @property {String}   context.flag.cwd      --ijs-working-dir=path
- **/
 enum InstallLoc {local, global}
-enum SpecLoc {none, full}
 
 class Flags {
 
     private static debug: boolean = false;
     private static install: InstallLoc;
-    private static specPath: SpecLoc;
     private static startup: string;
     private static cwd: string;
 
     static toString() {
         return `
         FLAG: [debug? ${Flags.debug ? "on" : "off"}, 
-               installAt: "${Flags.install}", 
-               specAt: "${Flags.specPath}",
+               installAt: "${Flags.install}",
                startupScript: "${Flags.startup}",
                workingDirectory: "${Flags.cwd}"]`;
     }
@@ -194,24 +176,12 @@ class Flags {
         Flags.install = loc;
     }
 
-    static set specAt(flag: string) {
-        let loc = SpecLoc[flag];
-        if (!loc) {
-            Logger.throwAndExit(true, false, "Invalid flag for spec location", flag);
-        }
-        Flags.specPath = loc;
-    }
-
     static set startUpScript(script: string) {
         Flags.startup = script;
     }
 
     static set workingDir(loc: string) {
         Flags.cwd = loc;
-    }
-
-    static get spec() {
-        return Flags.specPath;
     }
 
     static get startScript() {
@@ -268,10 +238,6 @@ class Arguments {
     }
 }
 
-/**
- * @property {String}   context.protocol.version      Protocol version
- * @property {Number}  context.protocol.majorVersion Protocol major version
- **/
 class Protocol {
     private static _version: string;
     private static _majorVersion: number;
@@ -307,11 +273,6 @@ class Protocol {
     }
 }
 
-/**
- * @property {Error}    context.frontend.error        Frontend error
- * @property {String}   context.frontend.version      Frontend version
- * @property {Number}  context.frontend.majorVersion Frontend major version
- **/
 class Frontend {
     static error: Error;
     private static _version: string;
@@ -344,16 +305,6 @@ class Frontend {
     }
 }
 
-/**
- * @typedef Main
- *
- * @property            context
- * @property            context.path
- * @property            context.flag
- * @property            context.args
- * @property            context.protocol
- * @property            context.frontend
- */
 class Main {
     static readonly packageJSON: {version: string} = JSON.parse(
         fs.readFileSync(Path.at("package.json")).toString()
@@ -364,43 +315,35 @@ class Main {
 
         for (let e of extraArgs) {
             let [name, ...values] = e.slice(2).split("=");
-            if (name.lastIndexOf("its", 0) === 0) {
-                switch (name) {
-                    case "help":
-                        Logger.printUsage();
-                        Arguments.passToFrontend(e);
-                        break;
-                    case "its-debug":
+            if (name.lastIndexOf("ts", 0) === 0) {
+                let subname = name.slice(3);
+                switch (subname) {
+                    case "debug":
                         Logger.onVerbose();
                         Flags.onDebug();
                         Arguments.passToKernel("--debug");
                         break;
-                    case "its-help":
+                    case "hide-undefined":
+                    case "show-undefined":
+                        Arguments.passToKernel(`--${subname}`);
+                        break;
+                    case "help":
                         Logger.printUsage();
                         process.exit(0);
                         break;
-                    case "its-hide-undefined":
-                        Arguments.passToKernel("--hide-undefined");
-                        break;
-                    case "its-install":
+                    case "install":
                         Flags.installAt = values[0];
                         break;
-                    case "its-install-kernel":
+                    case "install-kernel":
                         Flags.installAt = "local";
                         break;
-                    case "its-protocol":
+                    case "protocol":
                         Protocol.version = values[0];
                         break;
-                    case "its-show-undefined":
-                        Arguments.passToKernel("--show-undefined");
-                        break;
-                    case "its-spec-path":
-                        Flags.specAt = values[0];
-                        break;
-                    case "its-startup-script":
+                    case "startup-script":
                         Flags.startUpScript = values.join("=");
                         break;
-                    case "its-working-dir":
+                    case "working-dir":
                         Flags.workingDir = values.join("=");
                         break;
                     default:
@@ -408,6 +351,10 @@ class Main {
                 }
             } else {
                 switch (name) {
+                    case "help":
+                        Logger.printUsage();
+                        Arguments.passToFrontend(e);
+                        break;
                     case "version":
                         console.log(Main.packageJSON.version);
                         process.exit(0);
@@ -628,10 +575,6 @@ if (process.env["DEBUG"]) {
     Logger.onProcessDebug();
 }
 
-/**
- * Script context
- * @type Main
- */
 Main.prepare(function () {
     Main.setJupyterInfoAsync(function () {
         Main.setProtocol();

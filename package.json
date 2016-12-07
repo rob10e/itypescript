@@ -27,21 +27,14 @@
   "dependencies": {
     "jp-kernel": "^0.1.0",
     "typescript": "latest",
-    "typescript-compiler": "latest",
     "uuid": "^3.0.1"
   },
   "devDependencies": {
     "debug": "latest",
-    "typescript-docs": "latest",
-    "tslint": "latest",
-    "mocha": "3"
+    "tslint": "latest"
   },
   "scripts": {
-    "doc": "python scripts/doc-build.py",
-    "doc:publish": "node scripts/doc-publish.ts gh-pages https://github.com/nearbydelta/itypescript",
     "lint": "tslint bin/*.ts lib/*.ts",
-    "tsc": "npm run lint; tsc",
-    "test:mocha": "mocha",
-    "test": "npm run lint && npm run test:mocha"
+    "tsc": "npm run lint; tsc"
   }
 }

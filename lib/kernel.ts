@@ -42,7 +42,7 @@ let Kernel = require("jp-kernel");
 
 class Logger {
     private static usage = `
-Usage: node kernel.ts [--debug] [--hide-undefined] [--protocol=Major[.minor[.patch]]] [--session-working-dir=path] [--show-undefined] [--startup-script=path] connection_file
+Usage: node kernel.js [--debug] [--hide-undefined] [--protocol=Major[.minor[.patch]]] [--session-working-dir=path] [--show-undefined] [--startup-script=path] connection_file
 `;
 
     static log: (...msgs: any[]) => void = () => {
@@ -213,11 +213,6 @@ class Configuration {
     }
 }
 
-/**
- * Parse command arguments
- *
- * @returns {module:jp-kernel~Config} Kernel config
- */
 class Parser {
     static parse(): KernelConfig {
         let configBuilder = new Configuration();
