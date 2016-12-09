@@ -511,7 +511,7 @@ class Main {
         let specFile = path.join(specDir, "kernel.json");
         let spec = {
             argv: Arguments.kernel,
-            display_name: "Typescript",
+            display_name: `Typescript ${require("typescript").version.replace(/([0-9]+\.[0-9]+)\..*/g,"$1")}`,
             language: "typescript",
         };
         fs.writeFileSync(specFile, JSON.stringify(spec));

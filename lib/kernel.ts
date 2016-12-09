@@ -95,13 +95,14 @@ class Configuration {
     private hideUndefined: boolean = false;
     private protocolVer: string = "5.0";
     private onStartup: () => void = function () {
-        let code = "require(\"./node_modules/typescript/index.js\");";
+        let tscode = fs.readFileSync(path.join(__dirname, "startup.ts")).toString();
+        let code = ts.transpile(tscode, {});
         this.session.execute(code, {
             onSuccess: function () {
-                Logger.log("startupCallback: \"" + code + "\" run successfuly");
+                Logger.log("startupCallback: \"startup.ts\" run successfuly");
             },
             onError: function () {
-                Logger.log("startupCallback: \"" + code + "\" failed to run");
+                Logger.log("startupCallback: \"startup.ts\" failed to run");
             },
         });
     };
@@ -177,7 +178,7 @@ class Configuration {
                     return parseInt(v, 10);
                 });
             this.response = {
-                "language": `TypeScript ${ts.version.split(".",2).join(".")}`,
+                "language": "typescript",
                 "language_version": tsVersion,
                 "protocol_version": protocolVersion,
             };
@@ -190,7 +191,7 @@ class Configuration {
                 "implementation": "typescript",
                 "implementation_version": itsVersion,
                 "language_info": {
-                    "name": `TypeScript ${ts.version.split(".",2).join(".")}`,
+                    "name": "typescript",
                     "version": ts.version,
                     "mimetype": "text/x-typescript",
                     "file_extension": ".ts"

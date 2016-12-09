@@ -41,6 +41,7 @@ examples, from javascript to typescript.
 
 ## Installations
 
+### Prerequisites
 If you're using Typescript, you should install `node.js` first.
 Follow the instruction of [Node.js Download page](https://nodejs.org/en/download/) or
 [Node.js Installation page](https://nodejs.org/en/download/package-manager/).
@@ -48,6 +49,7 @@ Follow the instruction of [Node.js Download page](https://nodejs.org/en/download
 Also, you have to install `jupyter`. Follow the instruction of
 [Installing Jupyter notebook](http://jupyter.readthedocs.io/en/latest/install.html).
 
+### Stand-alone
 After installing these, install ITypescript by typing following shell command (Linux/Unix/Mac):
 ```sh
 sudo -H npm install -g itypescript
@@ -56,6 +58,17 @@ For windows, find `node.js prompt`, run it as administrator, and type:
 ```sh
 npm install -g itypescript
 ```
+
+### Jupyter Kernel
+You can install `itypescript` kernel globally with the following command:
+```sh
+sudo -H its --ts-install=global
+```
+Or you can install it locally:
+```sh
+its --ts-install=local
+```
+
 For further usage, check [usage.md](https://github.com/nearbydelta/itypescript/blob/master/doc/usage.md)
 
 # Contributions
