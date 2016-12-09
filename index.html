@@ -12,7 +12,7 @@
   <body>
     <section class="page-header">
       <h1 class="project-name">Itypescript</h1>
-      <h2 class="project-tagline">IJavascript is a javascript kernel for the Jupyter notebook</h2>
+      <h2 class="project-tagline">ITypescript is a typescript kernel for the Jupyter notebook (A modified version of IJavascript)</h2>
       <a href="https://github.com/nearbydelta/itypescript" class="btn">View on GitHub</a>
       <a href="https://github.com/nearbydelta/itypescript/zipball/master" class="btn">Download .zip</a>
       <a href="https://github.com/nearbydelta/itypescript/tarball/master" class="btn">Download .tar.gz</a>
@@ -72,12 +72,18 @@ documentation</li>
 <h2>
 <a id="installations" class="anchor" href="#installations" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installations</h2>
 
+<h3>
+<a id="prerequisites" class="anchor" href="#prerequisites" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Prerequisites</h3>
+
 <p>If you're using Typescript, you should install <code>node.js</code> first.
 Follow the instruction of <a href="https://nodejs.org/en/download/">Node.js Download page</a> or
 <a href="https://nodejs.org/en/download/package-manager/">Node.js Installation page</a>.</p>
 
 <p>Also, you have to install <code>jupyter</code>. Follow the instruction of
 <a href="http://jupyter.readthedocs.io/en/latest/install.html">Installing Jupyter notebook</a>.</p>
+
+<h3>
+<a id="stand-alone" class="anchor" href="#stand-alone" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Stand-alone</h3>
 
 <p>After installing these, install ITypescript by typing following shell command (Linux/Unix/Mac):</p>
 
@@ -86,6 +92,17 @@ Follow the instruction of <a href="https://nodejs.org/en/download/">Node.js Down
 <p>For windows, find <code>node.js prompt</code>, run it as administrator, and type:</p>
 
 <div class="highlight highlight-source-shell"><pre>npm install -g itypescript</pre></div>
+
+<h3>
+<a id="jupyter-kernel" class="anchor" href="#jupyter-kernel" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Jupyter Kernel</h3>
+
+<p>You can install <code>itypescript</code> kernel globally with the following command:</p>
+
+<div class="highlight highlight-source-shell"><pre>sudo -H its --ts-install=global</pre></div>
+
+<p>Or you can install it locally:</p>
+
+<div class="highlight highlight-source-shell"><pre>its --ts-install=<span class="pl-k">local</span></pre></div>
 
 <p>For further usage, check <a href="https://github.com/nearbydelta/itypescript/blob/master/doc/usage.md">usage.md</a></p>
 
