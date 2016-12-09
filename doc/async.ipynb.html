@@ -11756,7 +11756,7 @@ div#notebook {
 <li>by updating <code>stdout</code> and <code>stderr</code> asynchronously, or</li>
 <li>by updating the ITypescript output asynchronously.</li>
 </ul>
-<p>(<strong>Note</strong>: This function came from IJavascript)</p>
+<p><strong>Note</strong>: This function came from IJavascript, and we port these as static functions.</p>
 
 </div>
 </div>
@@ -11773,27 +11773,27 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[2]:</div>
+<div class="prompt input_prompt">In&nbsp;[4]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-TypeScript 2.1"><pre><span></span>class Counter {
-    private _n: number = 1;
-    private _intervalObject: object;
+<div class=" highlight hl-typescript"><pre><span></span><span class="kr">class</span> <span class="nx">Counter</span> <span class="p">{</span>
+    <span class="kr">private</span> <span class="nx">_n</span>: <span class="kt">number</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="kr">private</span> <span class="nx">_intervalObject</span>: <span class="kt">object</span><span class="p">;</span>
 
-    start(n: number, millisec: number){
-        this._n = n;
-        this._intervalObject = setInterval(() =&gt; {
-            console.log(this._n--);
-            if(this._n &lt; 0){
-                clearInterval(this._intervalObject);
-                console.warn(&quot;Done!&quot;);
-            }
-        }, millisec);
-    }
-}
+    <span class="nx">start</span><span class="p">(</span><span class="nx">n</span>: <span class="kt">number</span><span class="p">,</span> <span class="nx">millisec</span>: <span class="kt">number</span><span class="p">){</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_n</span> <span class="o">=</span> <span class="nx">n</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_intervalObject</span> <span class="o">=</span> <span class="nx">setInterval</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_n</span><span class="o">--</span><span class="p">);</span>
+            <span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_n</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">){</span>
+                <span class="nx">clearInterval</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_intervalObject</span><span class="p">);</span>
+                <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="s2">&quot;Done!&quot;</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">},</span> <span class="nx">millisec</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 
-let c = new Counter();
-c.start(5, 1000);
+<span class="kd">let</span> <span class="nx">c</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Counter</span><span class="p">();</span>
+<span class="nx">c</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span>
 </pre></div>
 
 </div>
@@ -11804,7 +11804,7 @@ c.start(5, 1000);
 <div class="output">
 
 
-<div class="output_area"><div class="prompt output_prompt">Out[2]:</div>
+<div class="output_area"><div class="prompt output_prompt">Out[4]:</div>
 
 
 <div class="output_text output_subarea output_execute_result">
@@ -11842,27 +11842,27 @@ c.start(5, 1000);
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <h2 id="Updating-the-ITypescript-output-asynchronously">Updating the ITypescript output asynchronously<a class="anchor-link" href="#Updating-the-ITypescript-output-asynchronously">&#182;</a></h2><p>ITypescript offers two global definitions to help produce an output asynchronously: <code>$$async$$</code> and <code>$$done$$()</code>.</p>
-<p>When <code>$$async$$</code> is set to <code>true</code>, the ITypescript kernel is instructed not to produce an output. Instead, an output can be produced by calling <code>$$done$$()</code>.</p>
-<p><strong>Note</strong>: Because <code>$$async$$</code> and <code>$$done$$()</code> are defined on javascript kernel(i.e. Base Kernel of IJavascript), these should be called as global parameters. In other words, <code>let $$async$$ = true</code> does not work.</p>
+<p>When you call <code>$TS.holdAsync()</code>, the ITypescript kernel is instructed not to produce an output. Instead, an output can be produced by calling <code>$TS.retrieve()</code>. This holding activity can be reset with <code>$TS.unholdAsync()</code>.</p>
+<p><strong>Note</strong>: We defined a new class <code>$TS</code> and <em>ITypescript</em> automatically imports this static class. And because these functions are dependent on <code>global.$$</code> of <em>IJavascript</em>, we recommend do not redefine these functions.</p>
 
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[3]:</div>
+<div class="prompt input_prompt">In&nbsp;[5]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-TypeScript 2.1"><pre><span></span>$$async$$ = true;
+<div class=" highlight hl-typescript"><pre><span></span><span class="nx">$TS</span><span class="p">.</span><span class="nx">holdAsync</span><span class="p">();</span>
 
-console.log(&quot;Hello!&quot;);
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Hello!&quot;</span><span class="p">);</span>
 
-setTimeout(
-    () =&gt; {
-        $$done$$(&quot;And good bye!&quot;);
-    },
-    1000
-);
+<span class="nx">setTimeout</span><span class="p">(</span>
+    <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="nx">$TS</span><span class="p">.</span><span class="nx">retrieve</span><span class="p">(</span><span class="s2">&quot;And good bye!&quot;</span><span class="p">);</span>
+    <span class="p">},</span>
+    <span class="mi">1000</span>
+<span class="p">);</span>
 </pre></div>
 
 </div>
@@ -11880,7 +11880,7 @@ setTimeout(
 </div>
 </div>
 
-<div class="output_area"><div class="prompt output_prompt">Out[3]:</div>
+<div class="output_area"><div class="prompt output_prompt">Out[5]:</div>
 
 
 <div class="output_text output_subarea output_execute_result">
@@ -11898,8 +11898,7 @@ setTimeout(
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>It is also possible to produce a graphical output asynchronously, the same way it is done synchronously, with the difference that <code>$$done$$()</code> has to be called to instruct the ITypescript kernel that the output is ready:</p>
-<p><strong>Note</strong>: Because <code>$$svg$$</code> is also defined on javascript kernel(i.e. Base Kernel of IJavascript), it SHOULD be called as a GLOBAL parameter. In other words, <code>let $$svg$$ = "&lt;svg&gt;...&lt;/svg&gt;"</code> does not work.</p>
+<p>It is also possible to produce a graphical output asynchronously, the same way it is done synchronously, with the difference that <code>$TS.retrieve()</code> has to be called to instruct the ITypescript kernel that the output is ready:</p>
 
 </div>
 </div>
@@ -11909,17 +11908,17 @@ setTimeout(
 <div class="prompt input_prompt">In&nbsp;[6]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-TypeScript 2.1"><pre><span></span>$$async$$ = true;
+<div class=" highlight hl-typescript"><pre><span></span><span class="nx">$TS</span><span class="p">.</span><span class="nx">holdAsync</span><span class="p">();</span>
 
-console.log(&quot;Hello!&quot;);
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Hello!&quot;</span><span class="p">);</span>
 
-setTimeout(
-    () =&gt; {
-        $$svg$$ = &quot;&lt;svg&gt;&lt;circle cx=&#39;30px&#39; cy=&#39;30px&#39; r=&#39;20px&#39;/&gt;&lt;/svg&gt;&quot;;
-        $$done$$();
-    },
-    1000
-);
+<span class="nx">setTimeout</span><span class="p">(</span>
+    <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="nx">$TS</span><span class="p">.</span><span class="nx">svg</span><span class="p">(</span><span class="s2">&quot;&lt;svg&gt;&lt;circle cx=&#39;30px&#39; cy=&#39;30px&#39; r=&#39;20px&#39;/&gt;&lt;/svg&gt;&quot;</span><span class="p">);</span>
+        <span class="nx">$TS</span><span class="p">.</span><span class="nx">retrieve</span><span class="p">();</span>
+    <span class="p">},</span>
+    <span class="mi">1000</span>
+<span class="p">);</span>
 </pre></div>
 
 </div>
