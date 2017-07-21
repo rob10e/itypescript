@@ -26,16 +26,16 @@ We converted the code into typescript, and modified tiny fraction of it.
 Following examples are translation of [IJavascript](http://n-riesco.github.io/ijavascript)'s
 examples, from javascript to typescript.
 
-- [Hello, World!](http://nearbydelta.github.io/itypescript/doc/hello.ipynb.html)
+- [Hello, World!](https://github.com/nearbydelta/itypescript/blob/master/doc/hello.ipynb.html)
 - [Graphical
-  output](http://nearbydelta.github.io/itypescript/doc/graphics.ipynb.html) for
+  output](https://github.com/nearbydelta/itypescript/blob/master/doc/graphics.ipynb.html) for
   `HTML`, `SVG`, `PNG`, ...
 - [Asynchronous
-  output](http://nearbydelta.github.io/itypescript/doc/async.ipynb.html)
-- [Autocompletion](http://nearbydelta.github.io/itypescript/doc/Completion.Inspection.ipynb.html):
+  output](https://github.com/nearbydelta/itypescript/blob/master/doc/async.ipynb.html)
+- [Autocompletion](https://github.com/nearbydelta/itypescript/blob/master/doc/Completion.Inspection.ipynb.html):
   press `TAB` to complete keywords and object properties
 - [Object
-  inspection](http://nearbydelta.github.io/itypescript/doc/Completion.Inspection.ipynb.html): press
+  inspection](https://github.com/nearbydelta/itypescript/blob/master/doc/Completion.Inspection.ipynb.html): press
   `Shift-TAB` to inspect an object and show its content or, if available, its
   documentation
 
