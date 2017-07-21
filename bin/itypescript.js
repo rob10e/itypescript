@@ -59,7 +59,7 @@ var Logger = (function () {
         Logger.log(Protocol.toString());
         Logger.log(Frontend.toString());
     };
-    Logger.usage = "Itypescript Notebook\n\nUsage:\n  its <options>\n\nThe recognized options are:\n  --help                        show ITypescript & notebook help\n  --ts-debug                    enable debug log level\n  --ts-help                     show ITypescript help\n  --ts-hide-undefined           do not show undefined results\n  --ts-install=[local|global]   install ITypescript kernel\n  --ts-protocol=version         set protocol version, e.g. 4.1\n  --ts-show-undefined           show undefined results\n  --ts-startup-script=path      run script on startup\n                                (path can be a file or a folder)\n  --ts-working-dir=path         set session working directory\n                                (default = current working directory)\n  --version                     show ITypescript version\n\nand any other options recognized by the Jupyter notebook; run:\n\n  jupyter notebook --help\n\nfor a full list.\n\nDisclaimer:\n  ITypescript notebook and its kernel are modified version of IJavascript notebook and its kernels.\n  Copyrights of original codes/algorithms belong to IJavascript developers.\n";
+    Logger.usage = "Itypescript Notebook\n\nUsage:\n  its <options>\n\nThe recognized options are:\n  --help                        show ITypescript & notebook help\n  --ts-debug                    enable debug log level\n  --ts-help                     show ITypescript help\n  --ts-semantic-chk=[on|off]    if 'on', typechecking is enabled.\n                                (default = 'off')\n  --ts-hide-undefined           do not show undefined results\n  --ts-install=[local|global]   install ITypescript kernel\n  --ts-protocol=version         set protocol version, e.g. 4.1\n  --ts-show-undefined           show undefined results\n  --ts-startup-script=path      run script on startup\n                                (path can be a file or a folder)\n  --ts-working-dir=path         set session working directory\n                                (default = current working directory)\n  --version                     show ITypescript version\n\nand any other options recognized by the Jupyter notebook; run:\n\n  jupyter notebook --help\n\nfor a full list.\n\nDisclaimer:\n  ITypescript notebook and its kernel are modified version of IJavascript notebook and its kernels.\n  Copyrights of original codes/algorithms belong to IJavascript developers.\n";
     Logger.log = function () {
     };
     return Logger;
@@ -141,6 +141,16 @@ var Flags = (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(Flags, "typeChecking", {
+        get: function () {
+            return Flags.typechk;
+        },
+        set: function (flag) {
+            Flags.typechk = flag;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Flags, "startScript", {
         get: function () {
             return Flags.startup;
@@ -163,6 +173,7 @@ var Flags = (function () {
         configurable: true
     });
     Flags.debug = false;
+    Flags.typechk = false;
     return Flags;
 }());
 /**
@@ -299,6 +310,9 @@ var Main = (function () {
                         Flags.onDebug();
                         Arguments.passToKernel("--debug");
                         break;
+                    case "semantic-chk":
+                        Flags.typeChecking = values[0].toLowerCase() === "on";
+                        break;
                     case "hide-undefined":
                     case "show-undefined":
                         Arguments.passToKernel("--" + subname);
@@ -349,6 +363,9 @@ var Main = (function () {
         }
         if (Flags.working) {
             Arguments.passToKernel("--session-working-dir", Flags.working);
+        }
+        if (Flags.typeChecking) {
+            Arguments.passToKernel("--semantic");
         }
         Arguments.passToKernel("{connection_file}");
         if (callback) {

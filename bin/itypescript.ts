@@ -54,7 +54,7 @@ The recognized options are:
   --ts-debug                    enable debug log level
   --ts-help                     show ITypescript help
   --ts-semantic-chk=[on|off]    if 'on', typechecking is enabled.
-                                (default = 'on')
+                                (default = 'off')
   --ts-hide-undefined           do not show undefined results
   --ts-install=[local|global]   install ITypescript kernel
   --ts-protocol=version         set protocol version, e.g. 4.1
@@ -156,7 +156,7 @@ class Flags {
     private static install: InstallLoc;
     private static startup: string;
     private static cwd: string;
-    private static typechk: boolean = true;
+    private static typechk: boolean = false;
 
     static toString() {
         return `
