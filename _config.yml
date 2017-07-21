@@ -1,0 +1,8 @@
+title: Itypescript
+description: ITypescript is a typescript kernel for the Jupyter notebook (A modified version of IJavascript)
+google_analytics: 
+show_downloads: true
+theme: jekyll-theme-cayman
+
+gems:
+  - jekyll-mentions
