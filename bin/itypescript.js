@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var child_process_1 = require("child_process");
 var fs = require("fs");
 var os = require("os");
@@ -13,7 +14,7 @@ var Logger = (function () {
         Logger.log = function () {
             var msgs = [];
             for (var _i = 0; _i < arguments.length; _i++) {
-                msgs[_i - 0] = arguments[_i];
+                msgs[_i] = arguments[_i];
             }
             process.stderr.write("ITS: ");
             console.error(msgs.join(" "));
@@ -25,7 +26,7 @@ var Logger = (function () {
             Logger.log = function () {
                 var msgs = [];
                 for (var _i = 0; _i < arguments.length; _i++) {
-                    msgs[_i - 0] = arguments[_i];
+                    msgs[_i] = arguments[_i];
                 }
                 debugging_1(msgs.join(" "));
             };
@@ -72,7 +73,7 @@ var Path = (function () {
     Path.at = function () {
         var rest = [];
         for (var _i = 0; _i < arguments.length; _i++) {
-            rest[_i - 0] = arguments[_i];
+            rest[_i] = arguments[_i];
         }
         return path.join.apply(path, [Path._root].concat(rest));
     };
@@ -103,8 +104,8 @@ var Path = (function () {
 }());
 var InstallLoc;
 (function (InstallLoc) {
-    InstallLoc[InstallLoc["local"] = 0] = "local";
-    InstallLoc[InstallLoc["global"] = 1] = "global";
+    InstallLoc[InstallLoc["local"] = 1] = "local";
+    InstallLoc[InstallLoc["global"] = 2] = "global";
 })(InstallLoc || (InstallLoc = {}));
 var Flags = (function () {
     function Flags() {
@@ -191,14 +192,14 @@ var Arguments = (function () {
     Arguments.passToKernel = function () {
         var args = [];
         for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i - 0] = arguments[_i];
+            args[_i] = arguments[_i];
         }
         Arguments._kernel.push(args.join("="));
     };
     Arguments.passToFrontend = function () {
         var args = [];
         for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i - 0] = arguments[_i];
+            args[_i] = arguments[_i];
         }
         Arguments._frontend.push(args.join("="));
     };
@@ -425,7 +426,7 @@ var Main = (function () {
                 callback.apply(void 0, dstFiles);
             });
         }
-        var _loop_1 = function(img) {
+        var _loop_1 = function (img) {
             var src = path.join(srcDir, img);
             var dst = path.join(dstDir, img);
             dstFiles.push(dst);
@@ -473,7 +474,7 @@ var Main = (function () {
         Main.copyAsync(logoDir, specDir, function () {
             var dstFiles = [];
             for (var _i = 0; _i < arguments.length; _i++) {
-                dstFiles[_i - 0] = arguments[_i];
+                dstFiles[_i] = arguments[_i];
             }
             // Install kernel spec
             var args = [

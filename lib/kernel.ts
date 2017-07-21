@@ -37,16 +37,21 @@
 
 import fs = require("fs");
 import path = require("path");
-import * as ts from "typescript";
+import {version as tsVersion, ScriptTarget, ModuleKind, ModuleResolutionKind, transpile as tsTranspile} from "typescript";
+import {TypeScriptSimple} from "typescript-simple";
 let Kernel = require("jp-kernel");
+
+let $TScode = `declare var $$async$$: boolean;
+declare var $$done$$: any;
+declare var $$: any;`;
 
 class Logger {
     private static usage = `
-Usage: node kernel.js [--debug] [--hide-undefined] [--protocol=Major[.minor[.patch]]] [--session-working-dir=path] [--show-undefined] [--startup-script=path] connection_file
+Usage: node kernel.js [--debug] [--semantic] [--hide-undefined] [--protocol=Major[.minor[.patch]]] [--session-working-dir=path] [--show-undefined] [--startup-script=path] connection_file
 `;
 
     static log: (...msgs: any[]) => void = () => {
-    }
+    };
 
     static onVerbose() {
         Logger.log = (...msgs: any[]) => {
@@ -91,20 +96,16 @@ interface KernelConfig {
 
 class Configuration {
     private _onDebug: boolean = false;
+    private _onTypeChk: boolean = false;
     private _workingDir: string = process.cwd();
     private hideUndefined: boolean = false;
     private protocolVer: string = "5.0";
-    private onStartup: () => void = function () {
-        let tscode = fs.readFileSync(path.join(__dirname, "startup.ts")).toString();
-        let code = ts.transpile(tscode, {});
-        this.session.execute(code, {
-            onSuccess: function () {
-                Logger.log("startupCallback: \"startup.ts\" run successfuly");
-            },
-            onError: function () {
-                Logger.log("startupCallback: \"startup.ts\" failed to run");
-            },
-        });
+    private transpiler: TypeScriptSimple;
+    private runningHistory: string[] = [$TScode];
+    private compiledLength: number = 0;
+
+    private onStartup = function (){
+        this.session.execute($TScode, {});
     };
 
     private isConnSet: boolean = false;
@@ -112,7 +113,50 @@ class Configuration {
     private response: Object;
     private _startupScript: string;
 
+    private static findTSConfig(dir: string){
+        let tsconf = path.join(dir, "tsconfig.json");
+        if(fs.existsSync(tsconf)){
+            return tsconf;
+        }else{
+            let parent = path.dirname(dir);
+            if(parent === dir){
+                return undefined;
+            }else{
+                return Configuration.findTSConfig(parent);
+            }
+        }
+    }
+
+    private static readTSConfig(dir: string){
+        let tsconfig = Configuration.findTSConfig(dir);
+        let DEFAULT = {
+            target: ScriptTarget.ES5,
+            module: ModuleKind.CommonJS,
+            moduleResolution: ModuleResolutionKind.NodeJs
+        };
+        if (tsconfig){
+            let json = JSON.parse(fs.readFileSync(tsconfig).toString());
+            let opt = json['compilerOptions'] || {};
+
+            if (!opt.moduleResolution){
+                opt.moduleResolution = DEFAULT.moduleResolution;
+            }
+            if (!opt.module){
+                opt.module = DEFAULT.module;
+            }
+            if (!opt.target){
+                opt.target = DEFAULT.target;
+            }
+
+            return opt;
+        }else{
+            return DEFAULT;
+        }
+    }
+
     get config(): KernelConfig {
+        this.transpiler = new TypeScriptSimple(Configuration.readTSConfig(this._workingDir), this._onTypeChk);
+
         let baseObj: KernelConfig = {
             cwd: this._workingDir,
             hideUndefined: this.hideUndefined,
@@ -122,7 +166,33 @@ class Configuration {
             kernelInfoReply: this.response,
             startupScript: this._startupScript,
             transpile: (code: string) => {
-                return ts.transpile(code, {});
+                try {
+                    let compiled = this.transpiler.compile(this.runningHistory.join("\n") + "\n" + code);
+
+                    // After successfully compiled.
+                    this.runningHistory.push(code);
+                    let last = compiled.substring(this.compiledLength);
+                    this.compiledLength = compiled.length;
+                    return last;
+                }catch(e){
+                    let lines = this.runningHistory.join("\n").split("\n").length;
+                    let msg = e.message.split("\n");
+                    let newMsg = msg.map((line) => {
+                        let number = line.match(/^L([0-9]+): /);
+                        if(number.length > 0){
+                            let newNumber = `\tLine ${parseInt(number[1]) - lines + 1}: `;
+                            return line.replace(/^L([0-9]+): /, newNumber);
+                        }else{
+                            return line;
+                        }
+                    }).join("\n");
+
+                    let newError = new Error(newMsg);
+                    newError.stack = "[COMPILE ERROR]\n" + newMsg;
+                    newError.name = e.name;
+
+                    throw newError;
+                }
             }
         };
 
@@ -152,6 +222,10 @@ class Configuration {
         this._onDebug = true;
     }
 
+    onTypeChk() {
+        this._onTypeChk = true;
+    }
+
     hideUndef() {
         this.hideUndefined = true;
     }
@@ -169,7 +243,7 @@ class Configuration {
         let majorVersion: number = parseInt(ver.split(".")[0]);
 
         if (majorVersion <= 4) {
-            let tsVersion = ts.version.split(".")
+            let tsVer = tsVersion.split(".")
                 .map(function (v) {
                     return parseInt(v, 10);
                 });
@@ -179,7 +253,7 @@ class Configuration {
                 });
             this.response = {
                 "language": "typescript",
-                "language_version": tsVersion,
+                "language_version": tsVer,
                 "protocol_version": protocolVersion,
             };
         } else {
@@ -192,7 +266,7 @@ class Configuration {
                 "implementation_version": itsVersion,
                 "language_info": {
                     "name": "typescript",
-                    "version": ts.version,
+                    "version": tsVersion,
                     "mimetype": "text/x-typescript",
                     "file_extension": ".ts"
                 },
@@ -225,6 +299,9 @@ class Parser {
                 case "debug":
                     configBuilder.onDebug();
                     Logger.onVerbose();
+                    break;
+                case "semantic":
+                    configBuilder.onTypeChk();
                     break;
                 case "hide-undefined":
                     configBuilder.hideUndef();

@@ -53,6 +53,8 @@ The recognized options are:
   --help                        show ITypescript & notebook help
   --ts-debug                    enable debug log level
   --ts-help                     show ITypescript help
+  --ts-semantic-chk=[on|off]    if 'on', typechecking is enabled.
+                                (default = 'on')
   --ts-hide-undefined           do not show undefined results
   --ts-install=[local|global]   install ITypescript kernel
   --ts-protocol=version         set protocol version, e.g. 4.1
@@ -147,14 +149,14 @@ class Path {
     }
 }
 
-enum InstallLoc {local, global}
+enum InstallLoc {local = 1, global = 2}
 
 class Flags {
-
     private static debug: boolean = false;
     private static install: InstallLoc;
     private static startup: string;
     private static cwd: string;
+    private static typechk: boolean = true;
 
     static toString() {
         return `
@@ -184,6 +186,10 @@ class Flags {
         Flags.cwd = loc;
     }
 
+    static set typeChecking(flag: boolean) {
+        Flags.typechk = flag;
+    }
+
     static get startScript() {
         return Flags.startup;
     }
@@ -194,6 +200,10 @@ class Flags {
 
     static get installPath() {
         return Flags.install;
+    }
+
+    static get typeChecking(){
+        return Flags.typechk;
     }
 }
 
@@ -323,6 +333,9 @@ class Main {
                         Flags.onDebug();
                         Arguments.passToKernel("--debug");
                         break;
+                    case "semantic-chk":
+                        Flags.typeChecking = values[0].toLowerCase() === "on";
+                        break;
                     case "hide-undefined":
                     case "show-undefined":
                         Arguments.passToKernel(`--${subname}`);
@@ -374,6 +387,10 @@ class Main {
 
         if (Flags.working) {
             Arguments.passToKernel("--session-working-dir", Flags.working);
+        }
+
+        if (Flags.typeChecking){
+            Arguments.passToKernel("--semantic");
         }
 
         Arguments.passToKernel("{connection_file}");
