@@ -1,6 +1,6 @@
 {
   "name": "itypescript",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "ITypescript is a Typescript kernel for the Jupyter notebook (A Modified version of IJavascript module)",
   "keywords": [
     "typescript",
@@ -25,17 +25,17 @@
     "itskernel": "lib/kernel.js"
   },
   "dependencies": {
-    "jp-kernel": "^0.1.3",
-    "typescript": "^2.4.2",
-    "typescript-simple": "^8.0.3",
-    "uuid": "^3.0.1"
+    "jp-kernel": "^1.2.0",
+    "typescript": "^3.3.3333"
   },
   "devDependencies": {
+    "@types/debug": "^4.1.2",
+    "@types/node": "^11.11.3",
     "debug": "latest",
     "tslint": "latest"
   },
   "scripts": {
-    "lint": "tslint bin/*.ts lib/*.ts",
-    "tsc": "npm run lint; tsc"
+    "lint": "./node_modules/.bin/tslint bin/*.ts lib/*.ts",
+    "tsc": "npm run lint; ./node_modules/.bin/tsc"
   }
 }

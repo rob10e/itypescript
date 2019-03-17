@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-/// <reference path="../typings/index.d.ts" />
 /*
  * BSD 3-Clause License
  *
@@ -35,15 +34,19 @@
  *
  */
 
+
+// Load required packages
 // import console = require("console");
 import {exec, spawn} from "child_process";
 import fs = require("fs");
 import os = require("os");
 import path = require("path");
-let uuid = require("uuid");
 
-// Setup logging helpers
+/**
+ * Logger for ITypescript launcher
+ */
 class Logger {
+    // Usage string
     private static usage: string = `Itypescript Notebook
 
 Usage:
@@ -51,14 +54,13 @@ Usage:
 
 The recognized options are:
   --help                        show ITypescript & notebook help
+  --install=[local|global]      install ITypescript kernel
   --ts-debug                    enable debug log level
   --ts-help                     show ITypescript help
-  --ts-semantic-chk=[on|off]    if 'on', typechecking is enabled.
-                                (default = 'off')
+  --ts-semantic                 enable semantics checking
   --ts-hide-undefined           do not show undefined results
-  --ts-install=[local|global]   install ITypescript kernel
-  --ts-protocol=version         set protocol version, e.g. 4.1
-  --ts-show-undefined           show undefined results
+  --ts-hide-execution-result    do not show execution results
+  --ts-protocol=version         set protocol version, e.g. 5.1
   --ts-startup-script=path      run script on startup
                                 (path can be a file or a folder)
   --ts-working-dir=path         set session working directory
@@ -76,9 +78,15 @@ Disclaimer:
   Copyrights of original codes/algorithms belong to IJavascript developers.
 `;
 
+    /**
+     * Logging function (Do nothing by default).
+     */
     static log: (...msgs: any[]) => void = () => {
     }
 
+    /**
+     * Set logger function as verbose level.
+     */
     static onVerbose() {
         Logger.log = (...msgs: any[]) => {
             process.stderr.write("ITS: ");
@@ -86,6 +94,9 @@ Disclaimer:
         };
     }
 
+    /**
+     * Set logger function as debug level.
+     */
     static onProcessDebug() {
         try {
             let debugging = require("debug")("ITS:");
@@ -97,6 +108,12 @@ Disclaimer:
         }
     }
 
+    /**
+     * Throw fatal error and exit.
+     * @param printUsage True if I should print usage of ITypescript
+     * @param printContext True if I should write down the current running context
+     * @param msgs messages to be displayed
+     */
     static throwAndExit(printUsage: boolean, printContext: boolean, ...msgs: any[]) {
         console.error(msgs.join(" "));
         if (printUsage) {
@@ -108,106 +125,65 @@ Disclaimer:
         process.exit(1);
     }
 
+    /**
+     * Print the usage string.
+     */
     static printUsage() {
         console.error(Logger.usage);
     }
 
+    /**
+     * Print the current running context
+     */
     static printContext() {
         Logger.log(Path.toString());
         Logger.log(Arguments.toString());
-        Logger.log(Flags.toString());
-        Logger.log(Protocol.toString());
-        Logger.log(Frontend.toString());
     }
 }
 
+/**
+ * Path helper class
+ */
 class Path {
+    // Location of node runtime
     private static _node: string = process.argv[0];
+    // Location of root path of ITypescript
     private static _root: string = path.dirname(
         path.dirname(fs.realpathSync(process.argv[1])) as string
     );
 
+    // Print the status string
     static toString() {
         return `
         PATH: [node: "${Path._node}", root: "${Path._root}"]`;
     }
 
+    /**
+     * Locate files in ITypescript project files
+     * @param rest Relative Path from the root of ITypescript
+     */
     static at(...rest: string[]): string {
         return path.join(Path._root, ...rest);
     }
 
+    // Location of node runtime
     static get node(): string {
         return Path._node;
     }
 
+    // Location of kernel file
     static get kernel(): string {
         return Path.at("lib", "kernel.js");
     }
 
+    // Location of image files (logo images)
     static get images(): string {
         return Path.at("images");
     }
 }
 
-enum InstallLoc {local = 1, global = 2}
-
-class Flags {
-    private static debug: boolean = false;
-    private static install: InstallLoc;
-    private static startup: string;
-    private static cwd: string;
-    private static typechk: boolean = false;
-
-    static toString() {
-        return `
-        FLAG: [debug? ${Flags.debug ? "on" : "off"}, 
-               installAt: "${Flags.install}",
-               startupScript: "${Flags.startup}",
-               workingDirectory: "${Flags.cwd}"]`;
-    }
-
-    static onDebug() {
-        Flags.debug = true;
-    }
-
-    static set installAt(flag: string) {
-        let loc = InstallLoc[flag];
-        if (!loc) {
-            Logger.throwAndExit(true, false, "Invalid flag for install location", flag);
-        }
-        Flags.install = loc;
-    }
-
-    static set startUpScript(script: string) {
-        Flags.startup = script;
-    }
-
-    static set workingDir(loc: string) {
-        Flags.cwd = loc;
-    }
-
-    static set typeChecking(flag: boolean) {
-        Flags.typechk = flag;
-    }
-
-    static get startScript() {
-        return Flags.startup;
-    }
-
-    static get working() {
-        return Flags.cwd;
-    }
-
-    static get installPath() {
-        return Flags.install;
-    }
-
-    static get typeChecking(){
-        return Flags.typechk;
-    }
-}
-
 /**
+ * Handling arguments which will be passed to child processes, such as jupyter(frontend) or kernel(lib/kernel.js).
  * @property {String[]} context.args.kernel   Command arguments to run kernel
  * @property {String[]} context.args.frontend Command arguments to run frontend
  **/
@@ -221,148 +197,110 @@ class Arguments {
         "notebook",
     ];
 
+    // Stringify arguments.
     static toString() {
         return `
         KernelArgs: [${Arguments._kernel.join(",")}],
         FrontendArgs: [${Arguments._frontend.join(",")}]`;
     }
 
+    // Get kernel arguments
     static get kernel() {
         return Arguments._kernel;
     }
 
+    // Get Jupyter frontend arguments
     static get frontend() {
         return Arguments._frontend;
     }
 
+    // Add to kernel arguments
     static passToKernel(...args: string[]) {
         Arguments._kernel.push(args.join("="));
     }
 
+    // Add to frontend arguments
     static passToFrontend(...args: string[]) {
         Arguments._frontend.push(args.join("="));
     }
 
+    // Set exec path of the frontend (Jupyter)
     static callFrontendWith(path: string) {
         Arguments._frontend[0] = path;
     }
 }
 
-class Protocol {
-    private static _version: string;
-    private static _majorVersion: number;
-
-    static toString() {
-        return `
-        PROTOCOL: version ${Protocol._version}`;
+/**
+ * Parse version string and retrieve major version number
+ * @param ver The version string to be parsed
+ * @return Major version number
+ */
+function majorVersionOf(ver: string): number {
+    let major = parseInt(ver.split(".")[0]);
+    if (isNaN(major)) {
+        Logger.throwAndExit(false, true,
+            "Error parsing version:",
+            ver
+        );
     }
-
-    static set version(ver: string) {
-        Protocol._version = ver;
-        Protocol._majorVersion = parseInt(ver.split(".", 1)[0]);
-    }
-
-    private static setup() {
-        if (!Protocol._version) {
-            if (Frontend.majorVersion < 3) {
-                Protocol.version = "4.1";
-            } else {
-                Protocol.version = "5.0";
-            }
-        }
-    }
-
-    static get version() {
-        Protocol.setup();
-        return Protocol._version;
-    }
-
-    static get majorVersion() {
-        Protocol.setup();
-        return Protocol._majorVersion;
-    }
+    return major;
 }
 
-class Frontend {
-    static error: Error;
-    private static _version: string;
-    private static _majorVersion: number;
-
-    static toString() {
-        return `
-        FRONTEND: version ${Frontend._version}
-                  error: ${Frontend.error ? Frontend.error : "NO ERROR" }`;
-    }
-
-    static set version(ver: string) {
-        Frontend._version = ver;
-        Frontend._majorVersion = parseInt(ver.split(".")[0]);
-
-        if (isNaN(Frontend.majorVersion)) {
-            Logger.throwAndExit(false, true,
-                "Error parsing Jupyter/Ipython version:",
-                ver
-            );
-        }
-    }
-
-    static get version() {
-        return Frontend._version;
-    }
-
-    static get majorVersion() {
-        return Frontend._majorVersion;
-    }
-}
-
+/**
+ * ITypescript Main Class
+ */
 class Main {
-    static readonly packageJSON: {version: string} = JSON.parse(
+    // Version of Jupyter protocol
+    static protocolVersion: string = null;
+    // Version of frontend (Jupyter/IPython)
+    static frontendVersion: string = null;
+    // Error object while idenitfying frontend's version
+    static frontIdentificationError: Object = null;
+    // Install location of ITypescript kernel.
+    static installLoc: string = null;
+
+    // Parse package JSON of ITypescript project
+    static readonly packageJSON: { version: string } = JSON.parse(
         fs.readFileSync(Path.at("package.json")).toString()
     );
 
+    /**
+     * Prepare arguments
+     * @param callback Callback called after parsing arguments
+     */
     static prepare(callback?: () => void) {
+        // Arguments specified in command line
         let extraArgs: string[] = process.argv.slice(2);
 
         for (let e of extraArgs) {
             let [name, ...values] = e.slice(2).split("=");
+
+            // arguments begin with 'ts' should be passed to Kernel
             if (name.lastIndexOf("ts", 0) === 0) {
                 let subname = name.slice(3);
+                if (subname === "debug") {
+                    Logger.onVerbose();
+                } else if (subname === "protocol") {
+                    Main.protocolVersion = values.join("=");
+                }
+
                 switch (subname) {
                     case "debug":
-                        Logger.onVerbose();
-                        Flags.onDebug();
-                        Arguments.passToKernel("--debug");
-                        break;
-                    case "semantic-chk":
-                        Flags.typeChecking = values[0].toLowerCase() === "on";
-                        break;
+                    case "semantic":
                     case "hide-undefined":
-                    case "show-undefined":
+                    case "hide-execution-result":
                         Arguments.passToKernel(`--${subname}`);
                         break;
-                    case "help":
-                        Logger.printUsage();
-                        process.exit(0);
-                        break;
-                    case "install":
-                        Flags.installAt = values[0];
-                        break;
-                    case "install-kernel":
-                        Flags.installAt = "local";
-                        break;
                     case "protocol":
-                        Protocol.version = values[0];
-                        break;
                     case "startup-script":
-                        Flags.startUpScript = values.join("=");
-                        break;
                     case "working-dir":
-                        Flags.workingDir = values.join("=");
+                        Arguments.passToKernel(`--${subname}`, ...values);
                         break;
                     default:
                         Logger.throwAndExit(true, false, "Unknown flag", e);
                 }
             } else {
+                // Otherwise, handle it in the frontend.
                 switch (name) {
                     case "help":
                         Logger.printUsage();
@@ -372,25 +310,21 @@ class Main {
                         console.log(Main.packageJSON.version);
                         process.exit(0);
                         break;
+                    case "install":
+                        Main.installLoc = values.length > 0 ? values[0].toLowerCase() : "";
+                        if (Main.installLoc !== "local" && Main.installLoc !== "global") {
+                            Logger.throwAndExit(true, false,
+                                `Invalid install location ${Main.installLoc}`, e);
+                        }
+                        break;
                     case "KernelManager.kernel_cmd":
                         console.warn(`Warning: Flag "${ e }" skipped`);
                         break;
                     default:
+                        // Other arguments are arguments of frontend scripts.
                         Arguments.passToFrontend(e);
                 }
             }
-        }
-
-        if (Flags.startScript) {
-            Arguments.passToKernel("--startup-script", Flags.startScript);
-        }
-
-        if (Flags.working) {
-            Arguments.passToKernel("--session-working-dir", Flags.working);
-        }
-
-        if (Flags.typeChecking){
-            Arguments.passToKernel("--semantic");
         }
 
         Arguments.passToKernel("{connection_file}");
@@ -400,31 +334,36 @@ class Main {
         }
     }
 
+    /**
+     * Set the number of Jupyter protocol used.
+     */
     static setProtocol() {
-        Arguments.passToKernel("--protocol", Protocol.version);
-
-        if (Frontend.majorVersion < 3) {
+        let frontMajor = majorVersionOf(Main.frontendVersion);
+        if (frontMajor < 3) {
             Arguments.passToFrontend(
                 "--KernelManager.kernel_cmd", `['${ Arguments.kernel.join("', '") }']`,
             );
-        }
 
-        if (Frontend.majorVersion < 3 &&
-            Protocol.majorVersion >= 5) {
-            console.warn("Warning: Protocol v5+ requires Jupyter v3+");
+            if (majorVersionOf(Main.protocolVersion) >= 5) {
+                console.warn("Warning: Protocol v5+ requires Jupyter v3+");
+            }
         }
     }
 
+    /**
+     * Identify version of Jupyter/IPython Notebook
+     * @param callback
+     */
     static setJupyterInfoAsync(callback?: () => void) {
         exec("jupyter --version", function (error, stdout) {
             if (error) {
-                Frontend.error = error;
-                Main.setIPythonInfoAsync(callback);
-                return;
+                // If error, try with IPython notebook
+                Main.frontIdentificationError = error;
+                return Main.setIPythonInfoAsync(callback);
             }
 
             Arguments.callFrontendWith("jupyter");
-            Frontend.version = stdout.toString().trim();
+            Main.frontendVersion = stdout.toString().trim();
 
             if (callback) {
                 callback();
@@ -432,12 +371,16 @@ class Main {
         });
     }
 
+    /**
+     * Identify version of IPython notebook
+     * @param callback
+     */
     static setIPythonInfoAsync(callback?: () => void) {
         exec("ipython --version", function (error, stdout) {
             if (error) {
-                if (Frontend.error) {
+                if (Main.frontIdentificationError) {
                     console.error("Error running `jupyter --version`");
-                    console.error(Frontend.error.toString());
+                    console.error(Main.frontIdentificationError.toString());
                 }
                 Logger.throwAndExit(false, true,
                     "Error running `ipython --version`\n",
@@ -446,7 +389,7 @@ class Main {
             }
 
             Arguments.callFrontendWith("ipython");
-            Frontend.version = stdout.toString().trim();
+            Main.frontendVersion = stdout.toString().trim();
 
             if (callback) {
                 callback();
@@ -454,26 +397,36 @@ class Main {
         });
     }
 
+    /**
+     * Make temporary directory to build kernel spec
+     * @param maxAttempts Maximum attempts to make directory
+     */
     static makeTmpdir(maxAttempts: number = 10): string {
         let attempts = 0;
         let tmpdir: string;
 
-        while (!tmpdir) {
+        while (!tmpdir && attempts < maxAttempts) {
             attempts++;
             try {
-                tmpdir = path.join(os.tmpdir(), uuid.v4());
-                fs.mkdirSync(tmpdir);
+                tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), ".itypescript-"));
             } catch (e) {
-                if (attempts >= maxAttempts) {
-                    Logger.throwAndExit(false, false, "Cannot make a temp directory!");
-                }
                 tmpdir = null;
             }
         }
 
+        if (tmpdir === null) {
+            Logger.throwAndExit(false, false, "Cannot make a temp directory!");
+        }
         return tmpdir;
     }
 
+    /**
+     * Do asynchronous copy
+     * @param srcDir Source directory
+     * @param dstDir Destination directory
+     * @param callback
+     * @param images Image files to be copied
+     */
     static copyAsync(srcDir: string, dstDir: string,
                      callback?: (...dstFiles: string[]) => void, ...images: string[]) {
         let dstFiles: string[] = [];
@@ -504,9 +457,13 @@ class Main {
         top();
     }
 
+    /**
+     * Install kernel
+     * @param callback
+     */
     static installKernelAsync(callback?: () => void) {
-        if (Frontend.majorVersion < 3) {
-            if (Flags.installPath) {
+        if (majorVersionOf(Main.frontendVersion) < 3) {
+            if (Main.installLoc) {
                 console.error(
                     "Error: Installation of kernel specs requires Jupyter v3+"
                 );
@@ -519,16 +476,16 @@ class Main {
             return;
         }
 
-        // Create temporary spec folder
+        // Create temporary directory to store kernel spec
         let tmpdir = Main.makeTmpdir();
         let specDir = path.join(tmpdir, "typescript");
         fs.mkdirSync(specDir);
 
-        // Create spec file
+        // Create kernel spec file
         let specFile = path.join(specDir, "kernel.json");
         let spec = {
             argv: Arguments.kernel,
-            display_name: `Typescript ${require("typescript").version.replace(/([0-9]+\.[0-9]+)\..*/g,"$1")}`,
+            display_name: `Typescript ${require("typescript").version.replace(/([0-9]+\.[0-9]+)\..*/g, "$1")}`,
             language: "typescript",
         };
         fs.writeFileSync(specFile, JSON.stringify(spec));
@@ -536,17 +493,18 @@ class Main {
         // Copy logo files
         let logoDir = path.join(Path.images);
         Main.copyAsync(logoDir, specDir, function (...dstFiles: string[]) {
-            // Install kernel spec
+            // Install with kernel spec file
             let args = [
                 Arguments.frontend[0],
                 "kernelspec install --replace",
                 specDir,
             ];
 
-            if (Flags.installPath !== InstallLoc.global) {
+            if (Main.installLoc === "local") {
                 args.push("--user");
             }
 
+            // Launch installation process using frontend
             let cmd = args.join(" ");
             exec(cmd, function (error, stdout, stderr) {
                 // Remove temporary spec folder
@@ -574,6 +532,9 @@ class Main {
         }, "logo-32x32.png", "logo-64x64.png");
     }
 
+    /**
+     * Launch frontend script
+     */
     static spawnFrontend() {
         let [cmd, ...args] = Arguments.frontend;
         let frontend = spawn(cmd, args, {
@@ -581,24 +542,31 @@ class Main {
         });
 
         // Relay SIGINT onto the frontend
-        let signal = "SIGINT";
-        process.on(signal, function () {
-            frontend.emit(signal);
+        process.on("SIGINT", function () {
+            frontend.emit("SIGINT");
         });
     }
 }
 
+/*** Below: Launch codes for ITypescript ***/
+
+// Check whether DEBUG is set in the environment
 if (process.env["DEBUG"]) {
     Logger.onProcessDebug();
 }
 
+// Launch Main process
 Main.prepare(function () {
+    // Check callnames for Jupyter frontend
     Main.setJupyterInfoAsync(function () {
+        // Set protocol version of Jupyter
         Main.setProtocol();
+        // Install kernel
         Main.installKernelAsync(function () {
             Logger.printContext();
 
-            if (!Flags.installPath) {
+            // If this is not installing ITypescript kernel, launch it.
+            if (!Main.installLoc) {
                 Main.spawnFrontend();
             }
         });

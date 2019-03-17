@@ -6,7 +6,11 @@
     "sourceMap": false
   },
   "files": [
-    "lib/kernel",
-    "bin/itypescript"
+    "lib/kernel.ts",
+    "bin/itypescript.ts"
+  ],
+  "types": [
+    "node",
+    "debug"
   ]
 }

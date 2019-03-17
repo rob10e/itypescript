@@ -5,11 +5,15 @@ var child_process_1 = require("child_process");
 var fs = require("fs");
 var os = require("os");
 var path = require("path");
-var uuid = require("uuid");
-// Setup logging helpers
-var Logger = (function () {
+/**
+ * Logger for ITypescript launcher
+ */
+var Logger = /** @class */ (function () {
     function Logger() {
     }
+    /**
+     * Set logger function as verbose level.
+     */
     Logger.onVerbose = function () {
         Logger.log = function () {
             var msgs = [];
@@ -20,6 +24,9 @@ var Logger = (function () {
             console.error(msgs.join(" "));
         };
     };
+    /**
+     * Set logger function as debug level.
+     */
     Logger.onProcessDebug = function () {
         try {
             var debugging_1 = require("debug")("ITS:");
@@ -35,6 +42,12 @@ var Logger = (function () {
             Logger.onVerbose();
         }
     };
+    /**
+     * Throw fatal error and exit.
+     * @param printUsage True if I should print usage of ITypescript
+     * @param printContext True if I should write down the current running context
+     * @param msgs messages to be displayed
+     */
     Logger.throwAndExit = function (printUsage, printContext) {
         var msgs = [];
         for (var _i = 2; _i < arguments.length; _i++) {
@@ -49,27 +62,42 @@ var Logger = (function () {
         }
         process.exit(1);
     };
+    /**
+     * Print the usage string.
+     */
     Logger.printUsage = function () {
         console.error(Logger.usage);
     };
+    /**
+     * Print the current running context
+     */
     Logger.printContext = function () {
         Logger.log(Path.toString());
         Logger.log(Arguments.toString());
-        Logger.log(Flags.toString());
-        Logger.log(Protocol.toString());
-        Logger.log(Frontend.toString());
     };
-    Logger.usage = "Itypescript Notebook\n\nUsage:\n  its <options>\n\nThe recognized options are:\n  --help                        show ITypescript & notebook help\n  --ts-debug                    enable debug log level\n  --ts-help                     show ITypescript help\n  --ts-semantic-chk=[on|off]    if 'on', typechecking is enabled.\n                                (default = 'off')\n  --ts-hide-undefined           do not show undefined results\n  --ts-install=[local|global]   install ITypescript kernel\n  --ts-protocol=version         set protocol version, e.g. 4.1\n  --ts-show-undefined           show undefined results\n  --ts-startup-script=path      run script on startup\n                                (path can be a file or a folder)\n  --ts-working-dir=path         set session working directory\n                                (default = current working directory)\n  --version                     show ITypescript version\n\nand any other options recognized by the Jupyter notebook; run:\n\n  jupyter notebook --help\n\nfor a full list.\n\nDisclaimer:\n  ITypescript notebook and its kernel are modified version of IJavascript notebook and its kernels.\n  Copyrights of original codes/algorithms belong to IJavascript developers.\n";
+    // Usage string
+    Logger.usage = "Itypescript Notebook\n\nUsage:\n  its <options>\n\nThe recognized options are:\n  --help                        show ITypescript & notebook help\n  --install=[local|global]      install ITypescript kernel\n  --ts-debug                    enable debug log level\n  --ts-help                     show ITypescript help\n  --ts-semantic                 enable semantics checking\n  --ts-hide-undefined           do not show undefined results\n  --ts-hide-execution-result    do not show execution results\n  --ts-protocol=version         set protocol version, e.g. 5.1\n  --ts-startup-script=path      run script on startup\n                                (path can be a file or a folder)\n  --ts-working-dir=path         set session working directory\n                                (default = current working directory)\n  --version                     show ITypescript version\n\nand any other options recognized by the Jupyter notebook; run:\n\n  jupyter notebook --help\n\nfor a full list.\n\nDisclaimer:\n  ITypescript notebook and its kernel are modified version of IJavascript notebook and its kernels.\n  Copyrights of original codes/algorithms belong to IJavascript developers.\n";
+    /**
+     * Logging function (Do nothing by default).
+     */
     Logger.log = function () {
     };
     return Logger;
 }());
-var Path = (function () {
+/**
+ * Path helper class
+ */
+var Path = /** @class */ (function () {
     function Path() {
     }
+    // Print the status string
     Path.toString = function () {
         return "\n        PATH: [node: \"" + Path._node + "\", root: \"" + Path._root + "\"]";
     };
+    /**
+     * Locate files in ITypescript project files
+     * @param rest Relative Path from the root of ITypescript
+     */
     Path.at = function () {
         var rest = [];
         for (var _i = 0; _i < arguments.length; _i++) {
@@ -78,6 +106,7 @@ var Path = (function () {
         return path.join.apply(path, [Path._root].concat(rest));
     };
     Object.defineProperty(Path, "node", {
+        // Location of node runtime
         get: function () {
             return Path._node;
         },
@@ -85,6 +114,7 @@ var Path = (function () {
         configurable: true
     });
     Object.defineProperty(Path, "kernel", {
+        // Location of kernel file
         get: function () {
             return Path.at("lib", "kernel.js");
         },
@@ -92,101 +122,33 @@ var Path = (function () {
         configurable: true
     });
     Object.defineProperty(Path, "images", {
+        // Location of image files (logo images)
         get: function () {
             return Path.at("images");
         },
         enumerable: true,
         configurable: true
     });
+    // Location of node runtime
     Path._node = process.argv[0];
+    // Location of root path of ITypescript
     Path._root = path.dirname(path.dirname(fs.realpathSync(process.argv[1])));
     return Path;
 }());
-var InstallLoc;
-(function (InstallLoc) {
-    InstallLoc[InstallLoc["local"] = 1] = "local";
-    InstallLoc[InstallLoc["global"] = 2] = "global";
-})(InstallLoc || (InstallLoc = {}));
-var Flags = (function () {
-    function Flags() {
-    }
-    Flags.toString = function () {
-        return "\n        FLAG: [debug? " + (Flags.debug ? "on" : "off") + ", \n               installAt: \"" + Flags.install + "\",\n               startupScript: \"" + Flags.startup + "\",\n               workingDirectory: \"" + Flags.cwd + "\"]";
-    };
-    Flags.onDebug = function () {
-        Flags.debug = true;
-    };
-    Object.defineProperty(Flags, "installAt", {
-        set: function (flag) {
-            var loc = InstallLoc[flag];
-            if (!loc) {
-                Logger.throwAndExit(true, false, "Invalid flag for install location", flag);
-            }
-            Flags.install = loc;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Flags, "startUpScript", {
-        set: function (script) {
-            Flags.startup = script;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Flags, "workingDir", {
-        set: function (loc) {
-            Flags.cwd = loc;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Flags, "typeChecking", {
-        get: function () {
-            return Flags.typechk;
-        },
-        set: function (flag) {
-            Flags.typechk = flag;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Flags, "startScript", {
-        get: function () {
-            return Flags.startup;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Flags, "working", {
-        get: function () {
-            return Flags.cwd;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Flags, "installPath", {
-        get: function () {
-            return Flags.install;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Flags.debug = false;
-    Flags.typechk = false;
-    return Flags;
-}());
 /**
+ * Handling arguments which will be passed to child processes, such as jupyter(frontend) or kernel(lib/kernel.js).
  * @property {String[]} context.args.kernel   Command arguments to run kernel
  * @property {String[]} context.args.frontend Command arguments to run frontend
  **/
-var Arguments = (function () {
+var Arguments = /** @class */ (function () {
     function Arguments() {
     }
+    // Stringify arguments.
     Arguments.toString = function () {
         return "\n        KernelArgs: [" + Arguments._kernel.join(",") + "],\n        FrontendArgs: [" + Arguments._frontend.join(",") + "]";
     };
     Object.defineProperty(Arguments, "kernel", {
+        // Get kernel arguments
         get: function () {
             return Arguments._kernel;
         },
@@ -194,12 +156,14 @@ var Arguments = (function () {
         configurable: true
     });
     Object.defineProperty(Arguments, "frontend", {
+        // Get Jupyter frontend arguments
         get: function () {
             return Arguments._frontend;
         },
         enumerable: true,
         configurable: true
     });
+    // Add to kernel arguments
     Arguments.passToKernel = function () {
         var args = [];
         for (var _i = 0; _i < arguments.length; _i++) {
@@ -207,6 +171,7 @@ var Arguments = (function () {
         }
         Arguments._kernel.push(args.join("="));
     };
+    // Add to frontend arguments
     Arguments.passToFrontend = function () {
         var args = [];
         for (var _i = 0; _i < arguments.length; _i++) {
@@ -214,6 +179,7 @@ var Arguments = (function () {
         }
         Arguments._frontend.push(args.join("="));
     };
+    // Set exec path of the frontend (Jupyter)
     Arguments.callFrontendWith = function (path) {
         Arguments._frontend[0] = path;
     };
@@ -227,120 +193,61 @@ var Arguments = (function () {
     ];
     return Arguments;
 }());
-var Protocol = (function () {
-    function Protocol() {
+/**
+ * Parse version string and retrieve major version number
+ * @param ver The version string to be parsed
+ * @return Major version number
+ */
+function majorVersionOf(ver) {
+    var major = parseInt(ver.split(".")[0]);
+    if (isNaN(major)) {
+        Logger.throwAndExit(false, true, "Error parsing version:", ver);
     }
-    Protocol.toString = function () {
-        return "\n        PROTOCOL: version " + Protocol._version;
-    };
-    Object.defineProperty(Protocol, "version", {
-        get: function () {
-            Protocol.setup();
-            return Protocol._version;
-        },
-        set: function (ver) {
-            Protocol._version = ver;
-            Protocol._majorVersion = parseInt(ver.split(".", 1)[0]);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Protocol.setup = function () {
-        if (!Protocol._version) {
-            if (Frontend.majorVersion < 3) {
-                Protocol.version = "4.1";
-            }
-            else {
-                Protocol.version = "5.0";
-            }
-        }
-    };
-    Object.defineProperty(Protocol, "majorVersion", {
-        get: function () {
-            Protocol.setup();
-            return Protocol._majorVersion;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    return Protocol;
-}());
-var Frontend = (function () {
-    function Frontend() {
-    }
-    Frontend.toString = function () {
-        return "\n        FRONTEND: version " + Frontend._version + "\n                  error: " + (Frontend.error ? Frontend.error : "NO ERROR");
-    };
-    Object.defineProperty(Frontend, "version", {
-        get: function () {
-            return Frontend._version;
-        },
-        set: function (ver) {
-            Frontend._version = ver;
-            Frontend._majorVersion = parseInt(ver.split(".")[0]);
-            if (isNaN(Frontend.majorVersion)) {
-                Logger.throwAndExit(false, true, "Error parsing Jupyter/Ipython version:", ver);
-            }
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Frontend, "majorVersion", {
-        get: function () {
-            return Frontend._majorVersion;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    return Frontend;
-}());
-var Main = (function () {
+    return major;
+}
+/**
+ * ITypescript Main Class
+ */
+var Main = /** @class */ (function () {
     function Main() {
     }
+    /**
+     * Prepare arguments
+     * @param callback Callback called after parsing arguments
+     */
     Main.prepare = function (callback) {
+        // Arguments specified in command line
         var extraArgs = process.argv.slice(2);
         for (var _i = 0, extraArgs_1 = extraArgs; _i < extraArgs_1.length; _i++) {
             var e = extraArgs_1[_i];
             var _a = e.slice(2).split("="), name_1 = _a[0], values = _a.slice(1);
+            // arguments begin with 'ts' should be passed to Kernel
             if (name_1.lastIndexOf("ts", 0) === 0) {
                 var subname = name_1.slice(3);
+                if (subname === "debug") {
+                    Logger.onVerbose();
+                }
+                else if (subname === "protocol") {
+                    Main.protocolVersion = values.join("=");
+                }
                 switch (subname) {
                     case "debug":
-                        Logger.onVerbose();
-                        Flags.onDebug();
-                        Arguments.passToKernel("--debug");
-                        break;
-                    case "semantic-chk":
-                        Flags.typeChecking = values[0].toLowerCase() === "on";
-                        break;
+                    case "semantic":
                     case "hide-undefined":
-                    case "show-undefined":
+                    case "hide-execution-result":
                         Arguments.passToKernel("--" + subname);
                         break;
-                    case "help":
-                        Logger.printUsage();
-                        process.exit(0);
-                        break;
-                    case "install":
-                        Flags.installAt = values[0];
-                        break;
-                    case "install-kernel":
-                        Flags.installAt = "local";
-                        break;
                     case "protocol":
-                        Protocol.version = values[0];
-                        break;
                     case "startup-script":
-                        Flags.startUpScript = values.join("=");
-                        break;
                     case "working-dir":
-                        Flags.workingDir = values.join("=");
+                        Arguments.passToKernel.apply(Arguments, ["--" + subname].concat(values));
                         break;
                     default:
                         Logger.throwAndExit(true, false, "Unknown flag", e);
                 }
             }
             else {
+                // Otherwise, handle it in the frontend.
                 switch (name_1) {
                     case "help":
                         Logger.printUsage();
@@ -350,87 +257,105 @@ var Main = (function () {
                         console.log(Main.packageJSON.version);
                         process.exit(0);
                         break;
+                    case "install":
+                        Main.installLoc = values.length > 0 ? values[0].toLowerCase() : "";
+                        if (Main.installLoc !== "local" && Main.installLoc !== "global") {
+                            Logger.throwAndExit(true, false, "Invalid install location " + Main.installLoc, e);
+                        }
+                        break;
                     case "KernelManager.kernel_cmd":
                         console.warn("Warning: Flag \"" + e + "\" skipped");
                         break;
                     default:
+                        // Other arguments are arguments of frontend scripts.
                         Arguments.passToFrontend(e);
                 }
             }
-        }
-        if (Flags.startScript) {
-            Arguments.passToKernel("--startup-script", Flags.startScript);
-        }
-        if (Flags.working) {
-            Arguments.passToKernel("--session-working-dir", Flags.working);
-        }
-        if (Flags.typeChecking) {
-            Arguments.passToKernel("--semantic");
         }
         Arguments.passToKernel("{connection_file}");
         if (callback) {
             callback();
         }
     };
+    /**
+     * Set the number of Jupyter protocol used.
+     */
     Main.setProtocol = function () {
-        Arguments.passToKernel("--protocol", Protocol.version);
-        if (Frontend.majorVersion < 3) {
+        var frontMajor = majorVersionOf(Main.frontendVersion);
+        if (frontMajor < 3) {
             Arguments.passToFrontend("--KernelManager.kernel_cmd", "['" + Arguments.kernel.join("', '") + "']");
-        }
-        if (Frontend.majorVersion < 3 &&
-            Protocol.majorVersion >= 5) {
-            console.warn("Warning: Protocol v5+ requires Jupyter v3+");
+            if (majorVersionOf(Main.protocolVersion) >= 5) {
+                console.warn("Warning: Protocol v5+ requires Jupyter v3+");
+            }
         }
     };
+    /**
+     * Identify version of Jupyter/IPython Notebook
+     * @param callback
+     */
     Main.setJupyterInfoAsync = function (callback) {
         child_process_1.exec("jupyter --version", function (error, stdout) {
             if (error) {
-                Frontend.error = error;
-                Main.setIPythonInfoAsync(callback);
-                return;
+                // If error, try with IPython notebook
+                Main.frontIdentificationError = error;
+                return Main.setIPythonInfoAsync(callback);
             }
             Arguments.callFrontendWith("jupyter");
-            Frontend.version = stdout.toString().trim();
+            Main.frontendVersion = stdout.toString().trim();
             if (callback) {
                 callback();
             }
         });
     };
+    /**
+     * Identify version of IPython notebook
+     * @param callback
+     */
     Main.setIPythonInfoAsync = function (callback) {
         child_process_1.exec("ipython --version", function (error, stdout) {
             if (error) {
-                if (Frontend.error) {
+                if (Main.frontIdentificationError) {
                     console.error("Error running `jupyter --version`");
-                    console.error(Frontend.error.toString());
+                    console.error(Main.frontIdentificationError.toString());
                 }
                 Logger.throwAndExit(false, true, "Error running `ipython --version`\n", error.toString());
             }
             Arguments.callFrontendWith("ipython");
-            Frontend.version = stdout.toString().trim();
+            Main.frontendVersion = stdout.toString().trim();
             if (callback) {
                 callback();
             }
         });
     };
+    /**
+     * Make temporary directory to build kernel spec
+     * @param maxAttempts Maximum attempts to make directory
+     */
     Main.makeTmpdir = function (maxAttempts) {
         if (maxAttempts === void 0) { maxAttempts = 10; }
         var attempts = 0;
         var tmpdir;
-        while (!tmpdir) {
+        while (!tmpdir && attempts < maxAttempts) {
             attempts++;
             try {
-                tmpdir = path.join(os.tmpdir(), uuid.v4());
-                fs.mkdirSync(tmpdir);
+                tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), ".itypescript-"));
             }
             catch (e) {
-                if (attempts >= maxAttempts) {
-                    Logger.throwAndExit(false, false, "Cannot make a temp directory!");
-                }
                 tmpdir = null;
             }
         }
+        if (tmpdir === null) {
+            Logger.throwAndExit(false, false, "Cannot make a temp directory!");
+        }
         return tmpdir;
     };
+    /**
+     * Do asynchronous copy
+     * @param srcDir Source directory
+     * @param dstDir Destination directory
+     * @param callback
+     * @param images Image files to be copied
+     */
     Main.copyAsync = function (srcDir, dstDir, callback) {
         var images = [];
         for (var _i = 3; _i < arguments.length; _i++) {
@@ -464,9 +389,13 @@ var Main = (function () {
         var top = callStack.pop();
         top();
     };
+    /**
+     * Install kernel
+     * @param callback
+     */
     Main.installKernelAsync = function (callback) {
-        if (Frontend.majorVersion < 3) {
-            if (Flags.installPath) {
+        if (majorVersionOf(Main.frontendVersion) < 3) {
+            if (Main.installLoc) {
                 console.error("Error: Installation of kernel specs requires Jupyter v3+");
             }
             if (callback) {
@@ -474,11 +403,11 @@ var Main = (function () {
             }
             return;
         }
-        // Create temporary spec folder
+        // Create temporary directory to store kernel spec
         var tmpdir = Main.makeTmpdir();
         var specDir = path.join(tmpdir, "typescript");
         fs.mkdirSync(specDir);
-        // Create spec file
+        // Create kernel spec file
         var specFile = path.join(specDir, "kernel.json");
         var spec = {
             argv: Arguments.kernel,
@@ -493,15 +422,16 @@ var Main = (function () {
             for (var _i = 0; _i < arguments.length; _i++) {
                 dstFiles[_i] = arguments[_i];
             }
-            // Install kernel spec
+            // Install with kernel spec file
             var args = [
                 Arguments.frontend[0],
                 "kernelspec install --replace",
                 specDir,
             ];
-            if (Flags.installPath !== InstallLoc.global) {
+            if (Main.installLoc === "local") {
                 args.push("--user");
             }
+            // Launch installation process using frontend
             var cmd = args.join(" ");
             child_process_1.exec(cmd, function (error, stdout, stderr) {
                 // Remove temporary spec folder
@@ -521,29 +451,47 @@ var Main = (function () {
             });
         }, "logo-32x32.png", "logo-64x64.png");
     };
+    /**
+     * Launch frontend script
+     */
     Main.spawnFrontend = function () {
         var _a = Arguments.frontend, cmd = _a[0], args = _a.slice(1);
         var frontend = child_process_1.spawn(cmd, args, {
             stdio: "inherit"
         });
         // Relay SIGINT onto the frontend
-        var signal = "SIGINT";
-        process.on(signal, function () {
-            frontend.emit(signal);
+        process.on("SIGINT", function () {
+            frontend.emit("SIGINT");
         });
     };
+    // Version of Jupyter protocol
+    Main.protocolVersion = null;
+    // Version of frontend (Jupyter/IPython)
+    Main.frontendVersion = null;
+    // Error object while idenitfying frontend's version
+    Main.frontIdentificationError = null;
+    // Install location of ITypescript kernel.
+    Main.installLoc = null;
+    // Parse package JSON of ITypescript project
     Main.packageJSON = JSON.parse(fs.readFileSync(Path.at("package.json")).toString());
     return Main;
 }());
+/*** Below: Launch codes for ITypescript ***/
+// Check whether DEBUG is set in the environment
 if (process.env["DEBUG"]) {
     Logger.onProcessDebug();
 }
+// Launch Main process
 Main.prepare(function () {
+    // Check callnames for Jupyter frontend
     Main.setJupyterInfoAsync(function () {
+        // Set protocol version of Jupyter
         Main.setProtocol();
+        // Install kernel
         Main.installKernelAsync(function () {
             Logger.printContext();
-            if (!Flags.installPath) {
+            // If this is not installing ITypescript kernel, launch it.
+            if (!Main.installLoc) {
                 Main.spawnFrontend();
             }
         });
