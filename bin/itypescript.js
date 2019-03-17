@@ -334,7 +334,7 @@ var Main = /** @class */ (function () {
     Main.makeTmpdir = function (maxAttempts) {
         if (maxAttempts === void 0) { maxAttempts = 10; }
         var attempts = 0;
-        var tmpdir;
+        var tmpdir = null;
         while (!tmpdir && attempts < maxAttempts) {
             attempts++;
             try {

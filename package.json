@@ -25,12 +25,16 @@
     "itskernel": "lib/kernel.js"
   },
   "dependencies": {
+    "diff": "^4.0.1",
     "jp-kernel": "^1.2.0",
-    "typescript": "^3.3.3333"
+    "typescript": "^3.3.3333",
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
     "@types/debug": "^4.1.2",
+    "@types/diff": "^4.0.1",
     "@types/node": "^11.11.3",
+    "@types/uuid": "^3.4.4",
     "debug": "latest",
     "tslint": "latest"
   },

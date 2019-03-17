@@ -14,13 +14,13 @@ The ITypescript kernel can be registered with Jupyter without
 opening the dashboard. To register the kernel for all users, run:
 
 ```sh
-its --ts-install=global
+its --install=global
 ```
 
 and for the current user only:
 
 ```sh
-its --ts-install=local
+its --install=local
 ```
 
 ## Set the dashboard home folder
@@ -65,7 +65,7 @@ its --ts-startup-script=path/to/folder
 Documentation on other flags can be found by running:
 
 ```sh
-its --its-help
+its --help
 ```
 
 ## Sample notebooks

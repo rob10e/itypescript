@@ -62,11 +62,11 @@ npm install -g itypescript
 ### Jupyter Kernel
 You can install `itypescript` kernel globally with the following command:
 ```sh
-sudo -H its --ts-install=global
+sudo -H its --install=global
 ```
 Or you can install it locally:
 ```sh
-its --ts-install=local
+its --install=local
 ```
 
 For further usage, check [usage.md](https://github.com/nearbydelta/itypescript/blob/master/doc/usage.md)

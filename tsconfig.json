@@ -2,15 +2,17 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "es5",
-    "noImplicitAny": false,
-    "sourceMap": false
+    "strictNullChecks": true,
+    "strictBindCallApply": true,
+    "sourceMap": false,
+      "types": [
+        "node",
+        "debug",
+        "uuid"
+      ]
   },
   "files": [
     "lib/kernel.ts",
     "bin/itypescript.ts"
-  ],
-  "types": [
-    "node",
-    "debug"
   ]
 }

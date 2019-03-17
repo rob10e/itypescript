@@ -251,13 +251,13 @@ function majorVersionOf(ver: string): number {
  */
 class Main {
     // Version of Jupyter protocol
-    static protocolVersion: string = null;
+    static protocolVersion: string | null = null;
     // Version of frontend (Jupyter/IPython)
-    static frontendVersion: string = null;
+    static frontendVersion: string | null = null;
     // Error object while idenitfying frontend's version
-    static frontIdentificationError: Object = null;
+    static frontIdentificationError: Object | null = null;
     // Install location of ITypescript kernel.
-    static installLoc: string = null;
+    static installLoc: string | null = null;
 
     // Parse package JSON of ITypescript project
     static readonly packageJSON: { version: string } = JSON.parse(
@@ -338,13 +338,13 @@ class Main {
      * Set the number of Jupyter protocol used.
      */
     static setProtocol() {
-        let frontMajor = majorVersionOf(Main.frontendVersion);
+        let frontMajor = majorVersionOf(Main.frontendVersion!);
         if (frontMajor < 3) {
             Arguments.passToFrontend(
                 "--KernelManager.kernel_cmd", `['${ Arguments.kernel.join("', '") }']`,
             );
 
-            if (majorVersionOf(Main.protocolVersion) >= 5) {
+            if (majorVersionOf(Main.protocolVersion!) >= 5) {
                 console.warn("Warning: Protocol v5+ requires Jupyter v3+");
             }
         }
@@ -403,7 +403,7 @@ class Main {
      */
     static makeTmpdir(maxAttempts: number = 10): string {
         let attempts = 0;
-        let tmpdir: string;
+        let tmpdir: string | null = null;
 
         while (!tmpdir && attempts < maxAttempts) {
             attempts++;
@@ -417,7 +417,7 @@ class Main {
         if (tmpdir === null) {
             Logger.throwAndExit(false, false, "Cannot make a temp directory!");
         }
-        return tmpdir;
+        return tmpdir!;
     }
 
     /**
@@ -447,14 +447,14 @@ class Main {
                 let writeStream = fs.createWriteStream(dst);
                 readStream.on("end", function () {
                     let top = callStack.pop();
-                    top();
+                    top!();
                 });
                 readStream.pipe(writeStream);
             });
         }
 
         let top = callStack.pop();
-        top();
+        top!();
     }
 
     /**
@@ -462,7 +462,7 @@ class Main {
      * @param callback
      */
     static installKernelAsync(callback?: () => void) {
-        if (majorVersionOf(Main.frontendVersion) < 3) {
+        if (majorVersionOf(Main.frontendVersion!) < 3) {
             if (Main.installLoc) {
                 console.error(
                     "Error: Installation of kernel specs requires Jupyter v3+"

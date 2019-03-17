@@ -1,4 +1,4 @@
-import fs = require("fs");
+declare var $$;
 
 class $TS {
     static done() {
@@ -41,7 +41,7 @@ class $TS {
     }
 
     static jpgFile(path: string) {
-        let base64 = fs.readFileSync(path).toString("base64");
+        let base64 = require("fs").readFileSync(path).toString("base64");
         $TS.jpg(base64);
     }
 
@@ -49,7 +49,7 @@ class $TS {
         $TS.put("text/plain", text);
     }
 
-    static throw(error: Error) {
+    static error(error: Error) {
         $$.sendError(error);
     }
 }

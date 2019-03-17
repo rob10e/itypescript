@@ -39,6 +39,7 @@ import fs = require("fs");
 import path = require("path");
 import ts = require("typescript");
 import Kernel = require("jp-kernel");
+import diff = require("diff");
 
 let $TScode = fs.readFileSync(path.join(__dirname, "startup.ts")).toString("UTF-8");
 
@@ -183,10 +184,7 @@ class Configuration {
     private _startupScript: string;
 
     static parseOptions(lines: string[]) {
-        let result = {
-            kernelConfig: {},
-            compilerOpts: {}
-        };
+        let result = {};
 
         for (let line of lines) {
             let [keyword, args] = line.slice(1).split(" ");
@@ -194,14 +192,14 @@ class Configuration {
                 case "semantic":
                 case "typecheck":
                 case "type-check":
-                    result.kernelConfig["typeChecking"] = args === "on";
+                    result["typeChecking"] = args === "on";
                     break;
                 case "async":
                 case "asynchronous":
-                    result.kernelConfig["asynchronous"] = args === "on";
+                    result["asynchronous"] = args === "on";
                     break;
                 default:
-                    result.compilerOpts[keyword.toLowerCase()] = JSON.parse(args);
+                    break;
             }
         }
 
@@ -213,83 +211,127 @@ class Configuration {
      */
     get config(): KernelConfig {
         // Generate file for transpile
-        let previousCodeLength = 0;
-        let previouslySuccessfulCode = "";
-        let execCount = -1;
+        let options = {};
+        let configFile = ts.findConfigFile(this._workingDir, ts.sys.fileExists);
+        let rootDir;
+        if (!configFile) {
+            options = {
+                "module": ts.ModuleKind.CommonJS,
+                "target": ts.ScriptTarget.ES5,
+                "moduleResolution": ts.ModuleResolutionKind.NodeJs
+            };
+            rootDir = this._workingDir;
+        } else {
+            options = JSON.parse(fs.readFileSync(configFile).toString("UTF-8")).compilerOptions;
+            rootDir = path.dirname(configFile);
+        }
 
-        let configOpt = {
-            "module": ts.ModuleKind.CommonJS,
-            "target": ts.ScriptTarget.ES5,
-            "moduleResolution": ts.ModuleResolutionKind.NodeJs
+        let typesdir = path.join(rootDir, "node_modules", "@types");
+        let typepaths: string[] = [];
+        if (fs.existsSync(typesdir)) {
+            typepaths = fs.readdirSync(typesdir).map(dir =>
+                `/// <reference path="${path.join(typesdir, dir, "index.d.ts")}"/>`);
+        } else {
+            typepaths = [];
+        }
+
+        let snapshot = typepaths;
+        let workFileVersion = 0;
+        let prevLines = 0;
+        let prevJSCode = "";
+
+        const FILENAME = "cell.ts";
+
+        const langServHost: ts.LanguageServiceHost = {
+            getScriptFileNames: () => [FILENAME],
+            getScriptVersion: fileName => workFileVersion.toString(),
+            getScriptSnapshot: fileName => {
+                if (fileName === FILENAME) {
+                    return ts.ScriptSnapshot.fromString(snapshot.join("\n"));
+                } else if (!fs.existsSync(fileName)) {
+                    return undefined;
+                }
+
+                return ts.ScriptSnapshot.fromString(fs.readFileSync(fileName).toString());
+            },
+            getCurrentDirectory: () => rootDir,
+            getCompilationSettings: () => options,
+            getDefaultLibFileName: options => ts.getDefaultLibFilePath(options),
+            fileExists: (filename: string) => {
+                return filename === FILENAME ? true : ts.sys.fileExists(filename);
+            },
+            readFile: (filename: string, encoding?: string) => {
+                return filename === FILENAME ? snapshot.join("\n") : ts.sys.readFile(filename, encoding);
+            },
+            readDirectory: (path: string) => {
+                return ts.sys.readDirectory(path);
+            }
         };
 
-        let compilerOpt = ts.convertCompilerOptionsFromJson(configOpt, this._workingDir);
-        let configOptATime = 0;
+        const services = ts.createLanguageService(langServHost, ts.createDocumentRegistry());
+
+        const execTranspile = (fileName: string) => {
+            let output = services.getEmitOutput(fileName);
+            let allDiagnostics = services
+                .getCompilerOptionsDiagnostics()
+                .concat(services.getSyntacticDiagnostics(fileName))
+                .concat(services.getSemanticDiagnostics(fileName));
+
+            if (output.emitSkipped || allDiagnostics.length > 0) {
+                throw Error(allDiagnostics.map(diagnostic => {
+                    let message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
+                    if (diagnostic.file) {
+                        let {line, character} = diagnostic.file.getLineAndCharacterOfPosition(
+                            diagnostic.start!
+                        );
+                        if (diagnostic.file.fileName === FILENAME) {
+                            let theErrorLine = snapshot[line];
+                            let errorPos = "_".repeat(character) + "^";
+                            line -= prevLines - 1;
+                            if (line < 0) {
+                                return `Conflict with a committed line: \n${theErrorLine}\n${errorPos}\n${message}`;
+                            } else {
+                                return `Line ${line}, Character ${character + 1}\n${theErrorLine}\n${errorPos}\n${message}`;
+                            }
+                        } else {
+                            return `${diagnostic.file.fileName} Line ${line}, Character ${character + 1}: ${message}`;
+                        }
+                    } else {
+                        return message;
+                    }
+                }).join("\n\n"));
+            }
+
+            return output.outputFiles[0].text;
+        };
 
         let transpiler = (rawCode: string) => {
-            const configFile = ts.findConfigFile(this._workingDir, ts.sys.fileExists);
-            let atime = configFile ? fs.statSync(configFile).atime.getMilliseconds() : 0;
-            if (atime !== configOptATime) {
-                configOpt = JSON.parse(fs.readFileSync(configFile).toString()).compilerOptions;
-                compilerOpt = ts.convertCompilerOptionsFromJson(configOpt, this._workingDir, configFile);
-                configOptATime = atime;
+            let code = rawCode.split("\n");
+            let overrideOptions: any = {};
+            if (code[0].startsWith("%")) {
+                overrideOptions = Configuration.parseOptions(code.filter(x => x.startsWith("%")));
+                code = code.filter(x => !x.startsWith("%"));
             }
 
-            let errMsg = [];
-            for (let diagnostic of compilerOpt.errors) {
-                errMsg.push("Error " + diagnostic.code + " : " +
-                    ts.flattenDiagnosticMessageText(diagnostic.messageText, ts.sys.newLine));
+            if (overrideOptions["asynchronous"]) {
+                code = ["$$.async();"].concat(code);
             }
 
-            if (errMsg.length)
-                throw Error(errMsg.join("\n"));
+            workFileVersion += 1;
+            snapshot.push(...code);
 
-            let code = rawCode;
-            let overrideOptions = {kernelConfig: {}, compilerOpts: {}};
-            if (code.startsWith("%")) {
-                const lines = code.split("\n");
-                overrideOptions = Configuration.parseOptions(lines.filter(x => x.startsWith("%")));
-                code = lines.filter(x => !x.startsWith("%")).join("\n");
+            try {
+                let generated = execTranspile(FILENAME);
+                let codeChange = diff.diffLines(prevJSCode, generated, {newlineIsToken: true});
+                let codeslice = codeChange.filter(s => s.added).map(s => s.value).join("\n");
+                prevLines = snapshot.length;
+                prevJSCode = generated;
+
+                return codeslice;
+            } catch (e) {
+                snapshot = snapshot.slice(0, prevLines);
+                throw e;
             }
-
-            console.log(overrideOptions, code);
-
-            let typeChecking = overrideOptions.kernelConfig.hasOwnProperty("typeChecking") ?
-                overrideOptions.kernelConfig["typeChecking"] : this._onTypeChk;
-            if (overrideOptions.kernelConfig.hasOwnProperty("asynchronous")) {
-                code = `$$async$$ = ${overrideOptions.kernelConfig["asynchronous"]}\n` + code;
-            }
-
-            let options = {};
-            for (let key of Object.keys(compilerOpt.options)){
-                options[key] = compilerOpt.options[key];
-            }
-            for (let key of Object.keys(overrideOptions.compilerOpts)){
-                options[key] = compilerOpt.options[key];
-            }
-
-            const output = ts.transpileModule(previouslySuccessfulCode + "\n" + code, {
-                compilerOptions: options,
-                reportDiagnostics: typeChecking,
-                moduleName: `Cell [${execCount}]`,
-                fileName: `Cell [${execCount}]`
-            });
-
-            for (let diagnostic of output.diagnostics) {
-                errMsg.push("Error " + diagnostic.code + " : " +
-                    ts.flattenDiagnosticMessageText(diagnostic.messageText, ts.sys.newLine));
-            }
-
-            if (errMsg.length)
-                throw Error(errMsg.join("\n"));
-
-            let transpiled = output.outputText.slice(previousCodeLength);
-
-            previouslySuccessfulCode += "\n" + code;
-            previousCodeLength = output.outputText.length;
-            execCount += 1;
-
-            return transpiled;
         };
 
         // Object for return (set by default)
@@ -422,7 +464,7 @@ class Parser {
     /**
      * Parse arguments of this process
      */
-    static parse(): KernelConfig {
+    static parse() {
         // Generate a configuration builder
         let configBuilder = new Configuration();
         // Load arguments
