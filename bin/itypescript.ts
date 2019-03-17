@@ -340,6 +340,9 @@ class Main {
     static setProtocol() {
         let frontMajor = majorVersionOf(Main.frontendVersion!);
         if (frontMajor < 3) {
+            Main.protocolVersion = "4.1";
+            Arguments.passToKernel("--protocol", Main.protocolVersion!);
+
             Arguments.passToFrontend(
                 "--KernelManager.kernel_cmd", `['${ Arguments.kernel.join("', '") }']`,
             );
@@ -347,6 +350,9 @@ class Main {
             if (majorVersionOf(Main.protocolVersion!) >= 5) {
                 console.warn("Warning: Protocol v5+ requires Jupyter v3+");
             }
+        } else {
+            Main.protocolVersion = "5.1";
+            Arguments.passToKernel("--protocol", Main.protocolVersion!);
         }
     }
 

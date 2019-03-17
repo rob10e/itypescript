@@ -432,7 +432,7 @@ class Configuration {
                 "language_info": {
                     "name": "typescript",
                     "version": ts.version,
-                    "mimetype": "text/x-typescript",
+                    "mimetype": "application/x-typescript",
                     "file_extension": ".ts"
                 },
                 "banner": (
