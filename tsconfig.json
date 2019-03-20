@@ -5,11 +5,12 @@
     "strictNullChecks": true,
     "strictBindCallApply": true,
     "sourceMap": false,
-      "types": [
-        "node",
-        "debug",
-        "uuid"
-      ]
+    "types": [
+      "node",
+      "debug",
+      "uuid"
+      /* should be deleted */
+    ]
   },
   "files": [
     "lib/kernel.ts",

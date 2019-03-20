@@ -40,6 +40,7 @@ import path = require("path");
 import ts = require("typescript");
 import Kernel = require("jp-kernel");
 import diff = require("diff");
+import {sys} from "typescript";
 
 let $TScode = fs.readFileSync(path.join(__dirname, "startup.ts")).toString("UTF-8");
 
@@ -51,7 +52,7 @@ class Logger {
 Usage: node kernel.js [options] connection_file
 Options:
     --debug                     Enables debugging ITypescript kernel
-    --semantic                  Enables typechecking
+    --off-es-module-interop     Turn off warning for "esModuleInterop" option.
     --hide-undefined            Hide 'undefined' results
     --hide-execution-result     Hide the result of execution
     --protocol=major[.minor[.patch]]]  The version of Jupyter protocol.
@@ -151,8 +152,8 @@ class Configuration {
     // Indicate whether this kernel is under debug
     private _onDebug: boolean = false;
 
-    // Indicate whether execution needs typechecking
-    private _onTypeChk: boolean = false;
+    // Indicate whether ESModuleInterop option should be turned off
+    private _offESInterop: boolean = false;
 
     // Path of working directory
     private _workingDir: string = process.cwd();
@@ -214,28 +215,37 @@ class Configuration {
         let options = {};
         let configFile = ts.findConfigFile(this._workingDir, ts.sys.fileExists);
         let rootDir;
+        let tsConfigWarnings: string[] = [];
+
         if (!configFile) {
             options = {
-                "module": ts.ModuleKind.CommonJS,
-                "target": ts.ScriptTarget.ES5,
-                "moduleResolution": ts.ModuleResolutionKind.NodeJs
+                "module": "commonjs",
+                "target": "es5",
+                "moduleResolution": "nodejs",
+                "esModuleInterop": !this._offESInterop
             };
             rootDir = this._workingDir;
+            tsConfigWarnings.push("Configuration is not found! Default configuration will be used: " +
+                JSON.stringify(options));
         } else {
-            options = JSON.parse(fs.readFileSync(configFile).toString("UTF-8")).compilerOptions;
+            let parsedConfig = ts.readConfigFile(configFile, ts.sys.readFile);
+            options = parsedConfig.config;
             rootDir = path.dirname(configFile);
+
+            if (parsedConfig.error) {
+                tsConfigWarnings.push("Error parsing configuration file:" +
+                    ts.flattenDiagnosticMessageText(parsedConfig.error.messageText, ts.sys.newLine));
+            }
         }
 
-        let typesdir = path.join(rootDir, "node_modules", "@types");
-        let typepaths: string[] = [];
-        if (fs.existsSync(typesdir)) {
-            typepaths = fs.readdirSync(typesdir).map(dir =>
-                `/// <reference path="${path.join(typesdir, dir, "index.d.ts")}"/>`);
-        } else {
-            typepaths = [];
+        if (!options["esModuleInterop"] && !this._offESInterop) {
+            tsConfigWarnings.push("Without 'esModuleInterop' option in tsconfig.json, import statement may not work as expected.");
+        }
+        if (options["module"] !== "commonjs") {
+            tsConfigWarnings.push("The 'module' in tsconfig.json is not 'commonjs'");
         }
 
-        let snapshot = typepaths;
+        let snapshot: string[] = [];
         let workFileVersion = 0;
         let prevLines = 0;
         let prevJSCode = "";
@@ -327,6 +337,14 @@ class Configuration {
                 prevLines = snapshot.length;
                 prevJSCode = generated;
 
+                if (tsConfigWarnings && workFileVersion > 1) {
+                    // Prepend warnings before code
+                    let warnings = tsConfigWarnings.map(str =>
+                        "$$.html(\"<p style='color:orange'>" + str.replace(/"/g, "\\\"") + "</p>\");\n").join("\n");
+                    codeslice = warnings + codeslice;
+                    tsConfigWarnings = [];
+                }
+
                 return codeslice;
             } catch (e) {
                 snapshot = snapshot.slice(0, prevLines);
@@ -377,8 +395,8 @@ class Configuration {
     }
 
     // Turn on typechecking feature
-    onTypeChk() {
-        this._onTypeChk = true;
+    offESInterop() {
+        this._offESInterop = true;
     }
 
     // Turn on hiding undefined results
@@ -477,9 +495,6 @@ class Parser {
                 case "debug":
                     configBuilder.onDebug();
                     Logger.onVerbose();
-                    break;
-                case "semantic":
-                    configBuilder.onTypeChk();
                     break;
                 case "hide-undefined":
                     configBuilder.hideUndef();

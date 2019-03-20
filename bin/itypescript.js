@@ -76,7 +76,7 @@ var Logger = /** @class */ (function () {
         Logger.log(Arguments.toString());
     };
     // Usage string
-    Logger.usage = "Itypescript Notebook\n\nUsage:\n  its <options>\n\nThe recognized options are:\n  --help                        show ITypescript & notebook help\n  --install=[local|global]      install ITypescript kernel\n  --ts-debug                    enable debug log level\n  --ts-help                     show ITypescript help\n  --ts-semantic                 enable semantics checking\n  --ts-hide-undefined           do not show undefined results\n  --ts-hide-execution-result    do not show execution results\n  --ts-protocol=version         set protocol version, e.g. 5.1\n  --ts-startup-script=path      run script on startup\n                                (path can be a file or a folder)\n  --ts-working-dir=path         set session working directory\n                                (default = current working directory)\n  --version                     show ITypescript version\n\nand any other options recognized by the Jupyter notebook; run:\n\n  jupyter notebook --help\n\nfor a full list.\n\nDisclaimer:\n  ITypescript notebook and its kernel are modified version of IJavascript notebook and its kernels.\n  Copyrights of original codes/algorithms belong to IJavascript developers.\n";
+    Logger.usage = "Itypescript Notebook\n\nUsage:\n  its <options>\n\nThe recognized options are:\n  --help                        show ITypescript & notebook help\n  --install=[local|global]      install ITypescript kernel\n  --ts-debug                    enable debug log level\n  --ts-help                     show ITypescript help\n  --ts-off-es-module-interop    Turn off warning for \"esModuleInterop\" option.\n  --ts-hide-undefined           do not show undefined results\n  --ts-hide-execution-result    do not show execution results\n  --ts-protocol=version         set protocol version, e.g. 5.1\n  --ts-startup-script=path      run script on startup\n                                (path can be a file or a folder)\n  --ts-working-dir=path         set session working directory\n                                (default = current working directory)\n  --version                     show ITypescript version\n\nand any other options recognized by the Jupyter notebook; run:\n\n  jupyter notebook --help\n\nfor a full list.\n\nDisclaimer:\n  ITypescript notebook and its kernel are modified version of IJavascript notebook and its kernels.\n  Copyrights of original codes/algorithms belong to IJavascript developers.\n";
     /**
      * Logging function (Do nothing by default).
      */
@@ -232,7 +232,7 @@ var Main = /** @class */ (function () {
                 }
                 switch (subname) {
                     case "debug":
-                    case "semantic":
+                    case "off-es-module-interop":
                     case "hide-undefined":
                     case "hide-execution-result":
                         Arguments.passToKernel("--" + subname);

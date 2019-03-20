@@ -57,7 +57,7 @@ The recognized options are:
   --install=[local|global]      install ITypescript kernel
   --ts-debug                    enable debug log level
   --ts-help                     show ITypescript help
-  --ts-semantic                 enable semantics checking
+  --ts-off-es-module-interop    Turn off warning for "esModuleInterop" option.
   --ts-hide-undefined           do not show undefined results
   --ts-hide-execution-result    do not show execution results
   --ts-protocol=version         set protocol version, e.g. 5.1
@@ -286,7 +286,7 @@ class Main {
 
                 switch (subname) {
                     case "debug":
-                    case "semantic":
+                    case "off-es-module-interop":
                     case "hide-undefined":
                     case "hide-execution-result":
                         Arguments.passToKernel(`--${subname}`);
