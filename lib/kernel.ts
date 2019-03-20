@@ -185,21 +185,22 @@ class Configuration {
     private _startupScript: string;
 
     static parseOptions(lines: string[]) {
-        let result = {};
+        let result = {
+            kernel: {},
+            compiler: {},
+        };
 
         for (let line of lines) {
-            let [keyword, args] = line.slice(1).split(" ");
+            let [keyword, ...args] = line.slice(1).split(" ");
+            let val = args.join(" ");
+
             switch (keyword.toLowerCase()) {
-                case "semantic":
-                case "typecheck":
-                case "type-check":
-                    result["typeChecking"] = args === "on";
-                    break;
                 case "async":
                 case "asynchronous":
-                    result["asynchronous"] = args === "on";
+                    result.kernel["asynchronous"] = true;
                     break;
                 default:
+                    result.compiler[keyword] = val;
                     break;
             }
         }
@@ -225,30 +226,24 @@ class Configuration {
                 "esModuleInterop": !this._offESInterop
             };
             rootDir = this._workingDir;
-            tsConfigWarnings.push("Configuration is not found! Default configuration will be used: " +
-                JSON.stringify(options));
+            tsConfigWarnings.push("<b>Configuration is not found!</b> Default configuration will be used: <pre>" +
+                JSON.stringify(options) + "</pre>");
         } else {
             let parsedConfig = ts.readConfigFile(configFile, ts.sys.readFile);
-            options = parsedConfig.config;
+            options = parsedConfig.config.compilerOptions;
             rootDir = path.dirname(configFile);
 
             if (parsedConfig.error) {
-                tsConfigWarnings.push("Error parsing configuration file:" +
-                    ts.flattenDiagnosticMessageText(parsedConfig.error.messageText, ts.sys.newLine));
+                tsConfigWarnings.push("<b>Error parsing configuration file!</b><pre>" +
+                    ts.flattenDiagnosticMessageText(parsedConfig.error.messageText, ts.sys.newLine) + "</pre>");
             }
-        }
-
-        if (!options["esModuleInterop"] && !this._offESInterop) {
-            tsConfigWarnings.push("Without 'esModuleInterop' option in tsconfig.json, import statement may not work as expected.");
-        }
-        if (options["module"] !== "commonjs") {
-            tsConfigWarnings.push("The 'module' in tsconfig.json is not 'commonjs'");
         }
 
         let snapshot: string[] = [];
         let workFileVersion = 0;
         let prevLines = 0;
         let prevJSCode = "";
+        let copiedOpts = Object.assign({}, options);
 
         const FILENAME = "cell.ts";
 
@@ -265,7 +260,7 @@ class Configuration {
                 return ts.ScriptSnapshot.fromString(fs.readFileSync(fileName).toString());
             },
             getCurrentDirectory: () => rootDir,
-            getCompilationSettings: () => options,
+            getCompilationSettings: () => copiedOpts,
             getDefaultLibFileName: options => ts.getDefaultLibFilePath(options),
             fileExists: (filename: string) => {
                 return filename === FILENAME ? true : ts.sys.fileExists(filename);
@@ -317,18 +312,41 @@ class Configuration {
 
         let transpiler = (rawCode: string) => {
             let code = rawCode.split("\n");
-            let overrideOptions: any = {};
+            let overrideOptions: any = null;
             if (code[0].startsWith("%")) {
                 overrideOptions = Configuration.parseOptions(code.filter(x => x.startsWith("%")));
                 code = code.filter(x => !x.startsWith("%"));
             }
 
-            if (overrideOptions["asynchronous"]) {
-                code = ["$$.async();"].concat(code);
+            if (overrideOptions) {
+                if (overrideOptions.kernel["asynchronous"]) {
+                    code = ["$$.async();"].concat(code);
+                }
+
+                for (let key of Object.getOwnPropertyNames(overrideOptions.compiler)) {
+                    let isPermanent = key.endsWith("!");
+                    let keyname = key.replace(/!$/, "");
+                    let parsed = JSON.parse(overrideOptions.compiler[key]);
+
+                    copiedOpts[keyname] = parsed;
+
+                    if (isPermanent) {
+                        // Rewrite default options
+                        options[keyname] = parsed;
+                    }
+                }
             }
 
             workFileVersion += 1;
             snapshot.push(...code);
+
+            if (!this._offESInterop
+                && code.some(x => x.trim().startsWith("import "))
+                && !copiedOpts["esModuleInterop"]) {
+                tsConfigWarnings.push("<b>The option 'esModuleInterop' is not true!</b> " +
+                    "Import statement may not work as expected. Consider adding 'esModuleInterop' option to your " +
+                    "tsconfig.json or add '%esModuleInterop! true' at the top of the cell.");
+            }
 
             try {
                 let generated = execTranspile(FILENAME);
@@ -337,12 +355,22 @@ class Configuration {
                 prevLines = snapshot.length;
                 prevJSCode = generated;
 
+
                 if (tsConfigWarnings && workFileVersion > 1) {
                     // Prepend warnings before code
                     let warnings = tsConfigWarnings.map(str =>
-                        "$$.html(\"<p style='color:orange'>" + str.replace(/"/g, "\\\"") + "</p>\");\n").join("\n");
+                        "$$.html(\"<div style='background:#ffecb3;padding:1em;border-left:2px solid #ff6d00'>" +
+                        str.replace(/"/g, "\\\"") + "</div>\");\n").join("\n");
                     codeslice = warnings + codeslice;
                     tsConfigWarnings = [];
+                }
+
+                if (overrideOptions) {
+                    // Restore overrided compiler options
+                    for (let key of Object.getOwnPropertyNames(overrideOptions.compiler)) {
+                        let keyname = key.replace(/!$/, "");
+                        copiedOpts[keyname] = options[keyname];
+                    }
                 }
 
                 return codeslice;
