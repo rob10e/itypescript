@@ -185,7 +185,7 @@ class Configuration {
     private _startupScript: string;
 
     static parseOptions(lines: string[]) {
-        let result = {
+        let result: {kernel: any, compiler: ts.CompilerOptions} = {
             kernel: {},
             compiler: {},
         };
@@ -194,10 +194,17 @@ class Configuration {
             let [keyword, ...args] = line.slice(1).split(" ");
             let val = args.join(" ");
 
+            keyword = keyword.trim();
+
             switch (keyword.toLowerCase()) {
                 case "async":
                 case "asynchronous":
                     result.kernel["asynchronous"] = true;
+                    break;
+                case "module":
+                case "jsx":
+                case "target":
+                case "moduleResolution":
                     break;
                 default:
                     result.compiler[keyword] = val;
@@ -213,29 +220,33 @@ class Configuration {
      */
     get config(): KernelConfig {
         // Generate file for transpile
-        let options = {};
+        let options: ts.CompilerOptions = {
+            module: ts.ModuleKind.CommonJS,
+            target: ts.ScriptTarget.ES5,
+            moduleResolution: ts.ModuleResolutionKind.NodeJs,
+            esModuleInterop: !this._offESInterop
+        };
         let configFile = ts.findConfigFile(this._workingDir, ts.sys.fileExists);
-        let rootDir;
         let tsConfigWarnings: string[] = [];
 
         if (!configFile) {
-            options = {
-                "module": "commonjs",
-                "target": "es5",
-                "moduleResolution": "nodejs",
-                "esModuleInterop": !this._offESInterop
-            };
-            rootDir = this._workingDir;
             tsConfigWarnings.push("<b>Configuration is not found!</b> Default configuration will be used: <pre>" +
                 JSON.stringify(options) + "</pre>");
         } else {
-            let parsedConfig = ts.readConfigFile(configFile, ts.sys.readFile);
-            options = parsedConfig.config.compilerOptions;
-            rootDir = path.dirname(configFile);
-
-            if (parsedConfig.error) {
-                tsConfigWarnings.push("<b>Error parsing configuration file!</b><pre>" +
-                    ts.flattenDiagnosticMessageText(parsedConfig.error.messageText, ts.sys.newLine) + "</pre>");
+            let parseConfigHost: ts.ParseConfigFileHost = {
+                getCurrentDirectory: () => this._workingDir,
+                readDirectory: ts.sys.readDirectory,
+                readFile: ts.sys.readFile,
+                useCaseSensitiveFileNames: ts.sys.useCaseSensitiveFileNames,
+                fileExists: ts.sys.fileExists,
+                onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+                    tsConfigWarnings.push("<b>Error parsing configuration file!</b><pre>" +
+                        ts.flattenDiagnosticMessageText(diagnostic.messageText, ts.sys.newLine) + "</pre>");
+                }
+            };
+            let parsedConfig = ts.getParsedCommandLineOfConfigFile(configFile, {}, parseConfigHost);
+            if (parsedConfig) {
+                options = parsedConfig.options;
             }
         }
 
@@ -244,6 +255,7 @@ class Configuration {
         let prevLines = 0;
         let prevJSCode = "";
         let copiedOpts = Object.assign({}, options);
+        console.log(options);
 
         const FILENAME = "cell.ts";
 
@@ -259,7 +271,7 @@ class Configuration {
 
                 return ts.ScriptSnapshot.fromString(fs.readFileSync(fileName).toString());
             },
-            getCurrentDirectory: () => rootDir,
+            getCurrentDirectory: () => this._workingDir,
             getCompilationSettings: () => copiedOpts,
             getDefaultLibFileName: options => ts.getDefaultLibFilePath(options),
             fileExists: (filename: string) => {
@@ -284,6 +296,7 @@ class Configuration {
 
             if (output.emitSkipped || allDiagnostics.length > 0) {
                 throw Error(allDiagnostics.map(diagnostic => {
+                    let code = `TS${diagnostic.code}`;
                     let message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
                     if (diagnostic.file) {
                         let {line, character} = diagnostic.file.getLineAndCharacterOfPosition(
@@ -294,15 +307,15 @@ class Configuration {
                             let errorPos = "_".repeat(character) + "^";
                             line -= prevLines - 1;
                             if (line < 0) {
-                                return `Conflict with a committed line: \n${theErrorLine}\n${errorPos}\n${message}`;
+                                return `Conflict with a committed line: \n${theErrorLine}\n${errorPos}\n${code}: ${message}`;
                             } else {
-                                return `Line ${line}, Character ${character + 1}\n${theErrorLine}\n${errorPos}\n${message}`;
+                                return `Line ${line}, Character ${character + 1}\n${theErrorLine}\n${errorPos}\n${code}: ${message}`;
                             }
                         } else {
-                            return `${diagnostic.file.fileName} Line ${line}, Character ${character + 1}: ${message}`;
+                            return `${diagnostic.file.fileName} Line ${line}, Character ${character + 1}.\n${code}: ${message}`;
                         }
                     } else {
-                        return message;
+                        return `${code}: ${message}`;
                     }
                 }).join("\n\n"));
             }
