@@ -300,7 +300,7 @@ var Main = /** @class */ (function () {
      * @param callback
      */
     Main.setJupyterInfoAsync = function (callback) {
-        child_process_1.exec("jupyter --version", function (error, stdout) {
+        child_process_1.exec("jupyter notebook --version", function (error, stdout) {
             if (error) {
                 // If error, try with IPython notebook
                 Main.frontIdentificationError = error;
