@@ -361,7 +361,7 @@ class Main {
      * @param callback
      */
     static setJupyterInfoAsync(callback?: () => void) {
-        exec("jupyter --version", function (error, stdout) {
+        exec("jupyter notebook --version", function (error, stdout) {
             if (error) {
                 // If error, try with IPython notebook
                 Main.frontIdentificationError = error;
