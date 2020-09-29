@@ -1,3 +1,5 @@
+# HELP WANTED: I'm very sorry that I cannot manage this repository anymore. See [issue #23](https://github.com/nearbydelta/itypescript/issues/23) for the discussion about ownership transfer.
+
 # ITypescript
 
 ITypescript is an [`npm` package](https://www.npmjs.com/) that implements a
